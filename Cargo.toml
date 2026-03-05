@@ -1,0 +1,10 @@
+[package]
+name = "upod"
+version = "0.1.0"
+edition = "2024"
+description = "AI沙箱基础设施"
+license = "Apache-2.0"
+repository = "https://github.com/uporm/upod"
+
+
+[dependencies]
