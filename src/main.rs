@@ -9,6 +9,7 @@ mod utils;
 mod web;
 mod business;
 mod core;
+mod runtime;
 
 // 初始化翻译文件
 rust_i18n::i18n!("resources/locales", fallback = "zh");

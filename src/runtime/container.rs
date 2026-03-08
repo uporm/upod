@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::utils::system_env::{SystemEnv, SystemEnvUtils};
+use crate::utils::system_env::{ SystemOS};
 
 pub struct Runtime {
     lima_instance: String,
@@ -32,12 +32,12 @@ impl Runtime {
                 bundle_dir.display().to_string(),
                 container_id.to_string(),
             ],
-            SystemEnvUtils::current(),
+            SystemOS::current(),
         )
     }
 
     pub fn start_container(&self, container_id: &str) -> Result<(), RuntimeError> {
-        self.exec_crun(&["start".to_string(), container_id.to_string()], SystemEnvUtils::current())
+        self.exec_crun(&["start".to_string(), container_id.to_string()], SystemOS::current())
     }
 
     pub fn generate_spec(&self, bundle_dir: impl AsRef<Path>) -> Result<(), RuntimeError> {
@@ -52,11 +52,11 @@ impl Runtime {
                 "--bundle".to_string(),
                 bundle_dir.display().to_string(),
             ],
-            SystemEnvUtils::current(),
+            SystemOS::current(),
         )
     }
 
-    fn exec_crun(&self, args: &[String], env: SystemEnv) -> Result<(), RuntimeError> {
+    fn exec_crun(&self, args: &[String], env: SystemOS) -> Result<(), RuntimeError> {
         let mut command = self.build_crun_command(args, env);
         let output = command.output()?;
 
@@ -76,22 +76,22 @@ impl Runtime {
         })
     }
 
-    fn build_crun_command(&self, args: &[String], env: SystemEnv) -> Command {
+    fn build_crun_command(&self, args: &[String], env: SystemOS) -> Command {
         let mut command = Command::new(self.command_program(env));
         command.args(self.command_args(args, env));
         command
     }
 
-    fn command_program(&self, env: SystemEnv) -> &str {
+    fn command_program(&self, env: SystemOS) -> &str {
         match env {
-            SystemEnv::MacOS => "limactl",
+            SystemOS::MacOS => "limactl",
             _ => "crun",
         }
     }
 
-    fn command_args(&self, args: &[String], env: SystemEnv) -> Vec<String> {
+    fn command_args(&self, args: &[String], env: SystemOS) -> Vec<String> {
         match env {
-            SystemEnv::MacOS => {
+            SystemOS::MacOS => {
                 let mut full_args = Vec::with_capacity(4 + args.len());
                 full_args.push("shell".to_string());
                 full_args.push(self.lima_instance.clone());
@@ -163,7 +163,7 @@ impl From<std::io::Error> for RuntimeError {
 #[cfg(test)]
 mod tests {
     use super::Runtime;
-    use crate::utils::system_env::SystemEnv;
+    use crate::utils::system_env::{SystemOS};
 
     #[test]
     fn build_linux_crun_command() {
@@ -175,7 +175,7 @@ mod tests {
             "demo".to_string(),
         ];
 
-        let command = runtime.build_crun_command(&args, SystemEnv::Linux);
+        let command = runtime.build_crun_command(&args, SystemOS::Linux);
 
         assert_eq!(command.get_program().to_string_lossy(), "crun");
         let rendered_args = command
@@ -194,7 +194,7 @@ mod tests {
             "/tmp/demo".to_string(),
         ];
 
-        let command = runtime.build_crun_command(&args, SystemEnv::MacOS);
+        let command = runtime.build_crun_command(&args, SystemOS::MacOS);
 
         assert_eq!(command.get_program().to_string_lossy(), "limactl");
         let rendered_args = command

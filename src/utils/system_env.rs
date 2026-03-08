@@ -1,73 +1,73 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SystemEnv {
+pub enum SystemOS {
     Linux,
     MacOS,
-    Windows,
     Unknown,
 }
 
-impl SystemEnv {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SystemArch {
+    X86_64,
+    Aarch64,
+    Unknown,
+}
+
+impl SystemOS {
     pub fn current() -> Self {
         Self::from_os(std::env::consts::OS)
     }
 
     pub fn as_str(self) -> &'static str {
         match self {
-            SystemEnv::Linux => "linux",
-            SystemEnv::MacOS => "macos",
-            SystemEnv::Windows => "windows",
-            SystemEnv::Unknown => "unknown",
+            SystemOS::Linux => "linux",
+            SystemOS::MacOS => "macos",
+            SystemOS::Unknown => "unknown",
         }
     }
 
     fn from_os(os: &str) -> Self {
         match os {
-            "linux" => SystemEnv::Linux,
-            "macos" => SystemEnv::MacOS,
-            "windows" => SystemEnv::Windows,
-            _ => SystemEnv::Unknown,
+            "linux" => SystemOS::Linux,
+            "macos" => SystemOS::MacOS,
+            _ => SystemOS::Unknown,
         }
     }
-}
-
-pub struct SystemEnvUtils;
-
-impl SystemEnvUtils {
-    pub fn current() -> SystemEnv {
-        SystemEnv::current()
-    }
-
     pub fn is_linux() -> bool {
-        Self::current() == SystemEnv::Linux
+        Self::current() == SystemOS::Linux
     }
 
     pub fn is_macos() -> bool {
-        Self::current() == SystemEnv::MacOS
-    }
-
-    pub fn is_windows() -> bool {
-        Self::current() == SystemEnv::Windows
+        Self::current() == SystemOS::MacOS
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::SystemEnv;
-
-    #[test]
-    fn current_matches_compile_target_os() {
-        assert_eq!(SystemEnv::current(), SystemEnv::from_os(std::env::consts::OS));
+impl SystemArch {
+    pub fn current() -> Self {
+        Self::from_arch(std::env::consts::ARCH)
     }
 
-    #[test]
-    fn parse_known_os_names() {
-        assert_eq!(SystemEnv::from_os("linux"), SystemEnv::Linux);
-        assert_eq!(SystemEnv::from_os("macos"), SystemEnv::MacOS);
-        assert_eq!(SystemEnv::from_os("windows"), SystemEnv::Windows);
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SystemArch::X86_64 => "x86_64",
+            SystemArch::Aarch64 => "aarch64",
+            SystemArch::Unknown => "unknown",
+        }
     }
 
-    #[test]
-    fn parse_unknown_os_name() {
-        assert_eq!(SystemEnv::from_os("freebsd"), SystemEnv::Unknown);
+    fn from_arch(arch: &str) -> Self {
+        match arch {
+            "x86_64" => SystemArch::X86_64,
+            "aarch64" => SystemArch::Aarch64,
+            _ => SystemArch::Unknown,
+        }
+    }
+
+    pub fn is_x86_64() -> bool {
+        Self::current() == SystemArch::X86_64
+    }
+
+    pub fn is_aarch64() -> bool {
+        Self::current() == SystemArch::Aarch64
     }
 }
+
