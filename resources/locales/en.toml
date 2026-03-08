@@ -1,0 +1,50 @@
+### System
+200 = "Ok"
+401 = "Unauthorized: Please log in or re-authenticate"
+403 = "Forbidden: Insufficient permissions"
+404 = "Not Found: The requested resource could not be found"
+405 = "Method Not Allowed: The HTTP method is not supported"
+429 = "Too Many Requests: Please try again later"
+430 = "Authentication Failed"
+431 = "Session Expired: Please log in again"
+432 = "Request Validation Failed"
+500 = "Internal Server Error. Please try again or contact support"
+800 = "File Too Large: Please upload a smaller file"
+900 = "Missing required header: %{field}"
+901 = "Missing required request parameter: %{field}"
+902 = "Invalid request parameter: %{field}"
+
+### User
+3007 = "User not found"
+
+### Folder
+3101 = "Parent folder does not exist"
+3102 = "Folder does not exist"
+3103 = "Folder is not empty"
+3104 = "Cannot move folder to itself or its subfolders"
+
+### App
+3201 = "App parent folder does not exist"
+3202 = "App does not exist"
+3203 = "App draft does not exist"
+
+### Workspace
+3301 = "Cannot delete current workspace, Please switch to another workspace first."
+3302 = "No workspace selected, Please select a workspace first"
+3303 = "Workspace does not exist"
+
+### Tag
+3401 = "Tag does not exist"
+
+### Validation
+1001 = "is required"
+1002 = "length must be between %{min} and %{max}"
+1003 = "length must be at least %{min}"
+1004 = "length must be at most %{max}"
+1005 = "length is invalid"
+1006 = "must be between %{min} and %{max}"
+1007 = "must be at least %{min}"
+1008 = "must be at most %{max}"
+1009 = "value is out of range"
+1010 = "must be a valid email"
+1011 = "invalid (%{code})"

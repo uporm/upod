@@ -1,0 +1,9 @@
+server: ${SERVER:localhost:3000}
+
+logger:
+  level: DEBUG
+  console_enabled: true
+
+database:
+  url: ${DATABASE_URL:mysql://root:123456@localhost:3306/uflow}
+
