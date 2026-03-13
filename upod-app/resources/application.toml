@@ -1,0 +1,4 @@
+server_port = 8080
+
+[proxy]
+server_port = 9000

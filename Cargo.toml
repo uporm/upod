@@ -1,26 +1,8 @@
-[package]
-name = "upod"
-version = "0.1.0"
-edition = "2024"
-description = "AI沙箱基础设施"
-license = "Apache-2.0"
-repository = "https://github.com/uporm/upod"
-
-
-[dependencies]
-rivus-core = { version = "0.5.0" }
-rivus-logger = { version = "0.5.0" }
-axum = { version = "0.8.8", features = ["multipart"] }
-axum-extra = { version = "0.12.5", features = ["query"] }
-dashmap = "5.5.3"
-tracing = "0.1"
-flate2 = "1.0.30"
-oci-client = "0.16.1"
-serde = { version = "1.0.225", features = ["derive"] }
-serde_json = "1.0.145"
-tar = "0.4.41"
-tokio = { version = "1.50.0", features = ["rt-multi-thread", "signal"] }
-anyhow = "1.0.102"
-rust-i18n = "3.1.5"
-thiserror = "2.0.18"
-validator = "0.20.0"
+[workspace]
+members = [
+    "upod-app",
+    "upod-base",
+    "upod-proxy",
+    "upod-sandbox",
+]
+resolver = "2"
