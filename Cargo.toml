@@ -2,6 +2,7 @@
 members = [
     "upod-app",
     "upod-base",
+    "upod-exec",
     "upod-proxy",
     "upod-sandbox",
 ]
