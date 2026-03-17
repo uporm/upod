@@ -14,28 +14,6 @@
 901 = "Missing required request parameter: %{field}"
 902 = "Invalid request parameter: %{field}"
 
-### User
-3007 = "User not found"
-
-### Folder
-3101 = "Parent folder does not exist"
-3102 = "Folder does not exist"
-3103 = "Folder is not empty"
-3104 = "Cannot move folder to itself or its subfolders"
-
-### App
-3201 = "App parent folder does not exist"
-3202 = "App does not exist"
-3203 = "App draft does not exist"
-
-### Workspace
-3301 = "Cannot delete current workspace, Please switch to another workspace first."
-3302 = "No workspace selected, Please select a workspace first"
-3303 = "Workspace does not exist"
-
-### Tag
-3401 = "Tag does not exist"
-
 ### Validation
 1001 = "is required"
 1002 = "length must be between %{min} and %{max}"

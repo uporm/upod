@@ -1,4 +1,12 @@
-server_port = 8080
+[server]
+addr = "0.0.0.0:8080"
 
-[proxy]
-server_port = 9000
+[gateway]
+addr = "0.0.0.0:9000"
+
+[logger]
+level = "debug"
+console = true
+filter_directives = [
+    "bollard::docker=off"
+]

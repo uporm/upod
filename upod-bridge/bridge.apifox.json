@@ -1,0 +1,1491 @@
+{
+  "apifoxProject": "1.0.0",
+  "$schema": {
+    "app": "apifox",
+    "type": "project",
+    "version": "1.2.0"
+  },
+  "info": {
+    "name": "upod-bridge API",
+    "description": "upod-bridge 的命令执行、状态查询、中断与后台输出接口文档",
+    "mockRule": {
+      "rules": [],
+      "enableSystemRule": true
+    }
+  },
+  "apiCollection": [
+    {
+      "name": "upod",
+      "parentId": 0,
+      "items": [
+        {
+          "name": "命令",
+          "items": [
+        {
+          "name": "执行命令",
+          "api": {
+            "method": "post",
+            "path": "/command",
+            "status": "developing",
+            "requestBody": {
+              "type": "application/json",
+              "parameters": [],
+              "jsonSchema": {
+                "type": "object",
+                "required": [
+                  "command"
+                ],
+                "properties": {
+                  "command": {
+                    "type": "string",
+                    "description": "要执行的 shell 命令",
+                    "example": "echo hello"
+                  },
+                  "cwd": {
+                    "type": "string",
+                    "description": "命令执行工作目录（可选）",
+                    "example": "/tmp"
+                  },
+                  "background": {
+                    "type": "boolean",
+                    "description": "是否后台执行（可选，默认 false）",
+                    "example": false
+                  },
+                  "timeout": {
+                    "type": "integer",
+                    "description": "超时时间（毫秒，可选）",
+                    "example": 10000
+                  }
+                }
+              },
+              "examples": [
+                {
+                  "name": "前台执行示例",
+                  "value": "{\n  \"command\": \"echo hello\",\n  \"cwd\": \"/tmp\",\n  \"background\": false,\n  \"timeout\": 10000\n}",
+                  "mediaType": "application/json"
+                },
+                {
+                  "name": "后台执行示例",
+                  "value": "{\n  \"command\": \"sleep 10 && echo done\",\n  \"background\": true\n}",
+                  "mediaType": "application/json"
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功（SSE）",
+                "contentType": "text/event-stream",
+                "jsonSchema": {
+                  "type": "object",
+                  "required": [
+                    "type"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "事件类型：init/accepted/stdout/stderr/error/complete。后台模式通常只返回 init、accepted；前台模式会返回 stdout/stderr，并以 complete 结束"
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "文本内容。init 事件中为命令会话 id（32 位十六进制字符串，无连字符）"
+                    },
+                    "execution_time": {
+                      "type": "integer",
+                      "description": "执行耗时（毫秒）"
+                    },
+                    "error": {
+                      "type": "object",
+                      "required": [
+                        "ename",
+                        "evalue",
+                        "traceback"
+                      ],
+                      "properties": {
+                        "ename": {
+                          "type": "string",
+                          "description": "错误名称"
+                        },
+                        "evalue": {
+                          "type": "string",
+                          "description": "错误描述或退出码信息"
+                        },
+                        "traceback": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "错误堆栈或错误信息列表"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "code": 400,
+                "name": "请求错误",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "string",
+                  "example": "命令不能为空"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        },
+        {
+          "name": "中断命令",
+          "api": {
+            "method": "delete",
+            "path": "/command",
+            "status": "developing",
+            "parameters": {
+              "query": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "required": true,
+                  "description": "命令会话 ID（由执行命令接口 init 事件返回）",
+                  "example": "8f102b104a434fd49ae3becf1376f4ea"
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 204,
+                "name": "成功",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "null"
+                }
+              },
+              {
+                "code": 404,
+                "name": "未找到会话",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "string",
+                  "example": "命令会话不存在或已结束"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        },
+        {
+          "name": "获取命令状态",
+          "api": {
+            "method": "get",
+            "path": "/command/status/{id}",
+            "status": "developing",
+            "parameters": {
+              "path": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "description": "命令会话 ID",
+                  "example": "8f102b104a434fd49ae3becf1376f4ea"
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功",
+                "contentType": "json",
+                "jsonSchema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "content",
+                    "running",
+                    "started_at"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "命令会话 ID"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "原始命令文本"
+                    },
+                    "running": {
+                      "type": "boolean",
+                      "description": "是否仍在运行"
+                    },
+                    "exit_code": {
+                      "type": "integer",
+                      "description": "退出码（运行中时为空）"
+                    },
+                    "error": {
+                      "type": "string",
+                      "description": "错误信息（成功时为空）"
+                    },
+                    "started_at": {
+                      "type": "integer",
+                      "description": "开始时间（毫秒时间戳）"
+                    },
+                    "finished_at": {
+                      "type": "integer",
+                      "description": "结束时间（毫秒时间戳，运行中时为空）"
+                    }
+                  }
+                }
+              },
+              {
+                "code": 404,
+                "name": "未找到会话",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "string",
+                  "example": "未找到命令会话"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        },
+        {
+          "name": "获取后台命令输出",
+          "api": {
+            "method": "get",
+            "path": "/command/output/{id}",
+            "status": "developing",
+            "parameters": {
+              "path": [
+                {
+                  "name": "id",
+                  "type": "string",
+                  "description": "命令会话 ID",
+                  "example": "8f102b104a434fd49ae3becf1376f4ea"
+                }
+              ],
+              "query": [
+                {
+                  "name": "cursor",
+                  "type": "integer",
+                  "description": "读取偏移量，默认 0",
+                  "example": 0
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "string",
+                  "description": "从 cursor 开始的增量输出文本"
+                }
+              },
+              {
+                "code": 500,
+                "name": "读取失败",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "string",
+                  "example": "Seek failed"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": [
+                {
+                  "name": "EXECD-COMMANDS-TAIL-CURSOR",
+                  "type": "string",
+                  "description": "下一次增量读取时应使用的 cursor"
+                }
+              ]
+            }
+          }
+        }
+          ]
+        },
+        {
+          "name": "沙箱",
+          "items": [
+            {
+              "name": "创建沙箱",
+              "api": {
+                "method": "post",
+                "path": "/v1/sandboxes",
+                "status": "developing",
+                "requestBody": {
+                  "type": "application/json",
+                  "parameters": [],
+                  "jsonSchema": {
+                    "type": "object",
+                    "required": [
+                      "image"
+                    ],
+                    "properties": {
+                      "image": {
+                        "type": "object",
+                        "required": [
+                          "uri"
+                        ],
+                        "properties": {
+                          "uri": {
+                            "type": "string",
+                            "description": "镜像 URI",
+                            "example": "python:3.11-slim"
+                          }
+                        },
+                        "description": "镜像信息"
+                      },
+                      "entrypoint": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "入口命令",
+                        "example": [
+                          "python",
+                          "--version"
+                        ]
+                      },
+                      "timeout": {
+                        "type": "integer",
+                        "description": "超时时间（秒）",
+                        "example": 3600
+                      },
+                      "resourceLimits": {
+                        "type": "object",
+                        "properties": {
+                          "cpu": {
+                            "type": "string",
+                            "description": "CPU 限制（例如 '500m' 或 '0.5'）",
+                            "example": "500m"
+                          },
+                          "memory": {
+                            "type": "string",
+                            "description": "内存限制（例如 '512Mi' 或 '1Gi'）",
+                            "example": "512Mi"
+                          }
+                        },
+                        "description": "资源限制配置"
+                      },
+                      "env": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "环境变量",
+                        "example": {
+                          "API_KEY": "secret-123",
+                          "DEBUG": "true"
+                        }
+                      },
+                      "metadata": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "description": "元数据标签",
+                        "example": {
+                          "owner": "user1",
+                          "project": "demo"
+                        }
+                      }
+                    }
+                  },
+                  "examples": [
+                    {
+                      "name": "示例 1",
+                      "value": "{\n  \"image\": {\n    \"uri\": \"python:3.11-slim\"\n  },\n  \"entrypoint\": [\n    \"python\",\n    \"-c\",\n    \"print('Hello World')\"\n  ],\n  \"timeout\": 3600,\n  \"resourceLimits\": {\n    \"cpu\": \"500m\",\n    \"memory\": \"512Mi\"\n  },\n  \"env\": {\n    \"API_KEY\": \"secret-123\",\n    \"DEBUG\": \"true\"\n  },\n  \"metadata\": {\n    \"owner\": \"user1\",\n    \"project\": \"demo\"\n  }\n}",
+                      "mediaType": "application/json"
+                    }
+                  ]
+                },
+                "responses": [
+                  {
+                    "code": 200,
+                    "name": "成功",
+                    "contentType": "json",
+                    "jsonSchema": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "description": "响应码（成功为 200）"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "响应消息"
+                        },
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "warnings"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "创建的容器 ID"
+                            },
+                            "warnings": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "创建过程中的警告信息"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "commonParameters": {
+                  "query": [],
+                  "body": [],
+                  "cookie": [],
+                  "header": []
+                }
+              }
+            },
+            {
+              "name": "获取沙箱列表",
+              "api": {
+                "method": "get",
+                "path": "/v1/sandboxes",
+                "status": "developing",
+                "parameters": {
+                  "query": [
+                    {
+                      "name": "state",
+                      "type": "string",
+                      "description": "按状态过滤（例如 running）",
+                      "example": "running"
+                    },
+                    {
+                      "name": "metadata",
+                      "type": "object",
+                      "description": "按元数据标签过滤（例如 metadata[key]=value）",
+                      "example": {
+                        "env": "prod",
+                        "project": "demo"
+                      }
+                    }
+                  ]
+                },
+                "responses": [
+                  {
+                    "code": 200,
+                    "name": "成功",
+                    "contentType": "json",
+                    "jsonSchema": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message",
+                        "data"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "integer",
+                          "description": "响应码（成功为 200）"
+                        },
+                        "message": {
+                          "type": "string",
+                          "description": "响应消息"
+                        },
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "items"
+                          ],
+                          "properties": {
+                            "items": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "id",
+                                  "name",
+                                  "status",
+                                  "image",
+                                  "createdAt",
+                                  "metadata"
+                                ],
+                                "properties": {
+                                  "id": {
+                                    "type": "string",
+                                    "description": "沙箱 ID"
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "description": "沙箱名称"
+                                  },
+                                  "status": {
+                                    "type": "string",
+                                    "description": "沙箱状态"
+                                  },
+                                  "image": {
+                                    "type": "string",
+                                    "description": "镜像 URI"
+                                  },
+                                  "createdAt": {
+                                    "type": "string",
+                                    "description": "创建时间"
+                                  },
+                                  "metadata": {
+                                    "type": "object",
+                                    "description": "元数据标签",
+                                    "additionalProperties": {
+                                      "type": "string"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "commonParameters": {
+                  "query": [],
+                  "body": [],
+                  "cookie": [],
+                  "header": []
+                }
+              }
+            },
+            {
+              "name": "获取沙箱详情",
+              "api": {
+                "method": "get",
+                "path": "/v1/sandboxes/{sandbox_id}",
+                "status": "developing",
+                "parameters": {
+                  "path": [
+                    {
+                      "name": "sandbox_id",
+                      "type": "string",
+                      "description": "沙箱 ID",
+                      "example": "sandbox-123"
+                    }
+                  ]
+                },
+                "responses": [
+                  {
+                    "code": 200,
+                    "name": "成功",
+                    "contentType": "json",
+                    "jsonSchema": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message",
+                        "data"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "integer"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "name",
+                            "status",
+                            "image",
+                            "createdAt",
+                            "entrypoint",
+                            "env",
+                            "metadata"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string"
+                            },
+                            "image": {
+                              "type": "string"
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            },
+                            "startedAt": {
+                              "type": "string"
+                            },
+                            "entrypoint": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "env": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "commonParameters": {
+                  "query": [],
+                  "body": [],
+                  "cookie": [],
+                  "header": []
+                }
+              }
+            },
+            {
+              "name": "删除沙箱",
+              "api": {
+                "method": "delete",
+                "path": "/v1/sandboxes/{sandbox_id}",
+                "status": "developing",
+                "parameters": {
+                  "path": [
+                    {
+                      "name": "sandbox_id",
+                      "type": "string",
+                      "description": "沙箱 ID",
+                      "example": "sandbox-123"
+                    }
+                  ]
+                },
+                "responses": [
+                  {
+                    "code": 200,
+                    "name": "成功",
+                    "contentType": "json",
+                    "jsonSchema": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "integer"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {
+                          "type": "null"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "commonParameters": {
+                  "query": [],
+                  "body": [],
+                  "cookie": [],
+                  "header": []
+                }
+              }
+            },
+            {
+              "name": "暂停沙箱",
+              "api": {
+                "method": "post",
+                "path": "/v1/sandboxes/{sandbox_id}/pause",
+                "status": "developing",
+                "parameters": {
+                  "path": [
+                    {
+                      "name": "sandbox_id",
+                      "type": "string",
+                      "description": "沙箱 ID",
+                      "example": "sandbox-123"
+                    }
+                  ]
+                },
+                "responses": [
+                  {
+                    "code": 200,
+                    "name": "成功",
+                    "contentType": "json",
+                    "jsonSchema": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "integer"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "commonParameters": {
+                  "query": [],
+                  "body": [],
+                  "cookie": [],
+                  "header": []
+                }
+              }
+            },
+            {
+              "name": "恢复沙箱",
+              "api": {
+                "method": "post",
+                "path": "/v1/sandboxes/{sandbox_id}/resume",
+                "status": "developing",
+                "parameters": {
+                  "path": [
+                    {
+                      "name": "sandbox_id",
+                      "type": "string",
+                      "description": "沙箱 ID",
+                      "example": "sandbox-123"
+                    }
+                  ]
+                },
+                "responses": [
+                  {
+                    "code": 200,
+                    "name": "成功",
+                    "contentType": "json",
+                    "jsonSchema": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "integer"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "commonParameters": {
+                  "query": [],
+                  "body": [],
+                  "cookie": [],
+                  "header": []
+                }
+              }
+            },
+            {
+              "name": "续期沙箱",
+              "api": {
+                "method": "post",
+                "path": "/v1/sandboxes/{sandbox_id}/renew-expiration",
+                "status": "developing",
+                "parameters": {
+                  "path": [
+                    {
+                      "name": "sandbox_id",
+                      "type": "string",
+                      "description": "沙箱 ID",
+                      "example": "sandbox-123"
+                    }
+                  ]
+                },
+                "requestBody": {
+                  "type": "application/json",
+                  "parameters": [],
+                  "jsonSchema": {
+                    "type": "object",
+                    "required": [
+                      "ttlSeconds"
+                    ],
+                    "properties": {
+                      "ttlSeconds": {
+                        "type": "integer",
+                        "description": "续期秒数",
+                        "example": 3600
+                      }
+                    }
+                  },
+                  "examples": [
+                    {
+                      "name": "示例 1",
+                      "value": "{\n  \"ttlSeconds\": 3600\n}",
+                      "mediaType": "application/json"
+                    }
+                  ]
+                },
+                "responses": [
+                  {
+                    "code": 200,
+                    "name": "成功",
+                    "contentType": "json",
+                    "jsonSchema": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message",
+                        "data"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "integer"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "expiresAt"
+                          ],
+                          "properties": {
+                            "expiresAt": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "commonParameters": {
+                  "query": [],
+                  "body": [],
+                  "cookie": [],
+                  "header": []
+                }
+              }
+            },
+            {
+              "name": "获取沙箱服务端点",
+              "api": {
+                "method": "get",
+                "path": "/v1/sandboxes/{sandbox_id}/endpoints/{port}",
+                "status": "developing",
+                "parameters": {
+                  "path": [
+                    {
+                      "name": "sandbox_id",
+                      "type": "string",
+                      "description": "沙箱 ID",
+                      "example": "sandbox-123"
+                    },
+                    {
+                      "name": "port",
+                      "type": "integer",
+                      "description": "沙箱服务端口",
+                      "example": 8080
+                    }
+                  ]
+                },
+                "responses": [
+                  {
+                    "code": 200,
+                    "name": "成功",
+                    "contentType": "json",
+                    "jsonSchema": {
+                      "type": "object",
+                      "required": [
+                        "code",
+                        "message",
+                        "data"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "integer"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "data": {
+                          "type": "object",
+                          "required": [
+                            "sandboxId",
+                            "port",
+                            "endpoint"
+                          ],
+                          "properties": {
+                            "sandboxId": {
+                              "type": "string"
+                            },
+                            "port": {
+                              "type": "integer"
+                            },
+                            "endpoint": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "commonParameters": {
+                  "query": [],
+                  "body": [],
+                  "cookie": [],
+                  "header": []
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "文件系统",
+          "items": [
+        {
+          "name": "获取文件元数据",
+          "api": {
+            "method": "get",
+            "path": "/files/info",
+            "status": "developing",
+            "parameters": {
+              "query": [
+                {
+                  "name": "path",
+                  "type": "array",
+                  "required": false,
+                  "description": "待查询文件路径，可重复传参",
+                  "example": [
+                    "/tmp/a.txt",
+                    "/tmp/b.txt"
+                  ]
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功",
+                "contentType": "json",
+                "jsonSchema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "required": [
+                      "path",
+                      "size",
+                      "modified_at",
+                      "created_at",
+                      "owner",
+                      "group",
+                      "mode"
+                    ],
+                    "properties": {
+                      "path": { "type": "string" },
+                      "size": { "type": "integer" },
+                      "modified_at": { "type": "integer" },
+                      "created_at": { "type": "integer" },
+                      "owner": { "type": "string" },
+                      "group": { "type": "string" },
+                      "mode": { "type": "integer" }
+                    }
+                  }
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        },
+        {
+          "name": "删除文件",
+          "api": {
+            "method": "delete",
+            "path": "/files",
+            "status": "developing",
+            "parameters": {
+              "query": [
+                {
+                  "name": "path",
+                  "type": "array",
+                  "required": false,
+                  "description": "待删除文件路径，可重复传参",
+                  "example": [
+                    "/tmp/a.txt",
+                    "/tmp/b.txt"
+                  ]
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "null"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        },
+        {
+          "name": "修改文件权限",
+          "api": {
+            "method": "post",
+            "path": "/files/permissions",
+            "status": "developing",
+            "requestBody": {
+              "type": "application/json",
+              "parameters": [],
+              "jsonSchema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "owner": { "type": "string" },
+                    "group": { "type": "string" },
+                    "mode": { "type": "integer", "description": "八进制数字形式，如 644/755" }
+                  }
+                }
+              },
+              "examples": [
+                {
+                  "name": "示例",
+                  "value": "{\n  \"/tmp/a.txt\": {\n    \"owner\": \"\",\n    \"group\": \"\",\n    \"mode\": 644\n  }\n}",
+                  "mediaType": "application/json"
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "null"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        },
+        {
+          "name": "移动或重命名文件",
+          "api": {
+            "method": "post",
+            "path": "/files/mv",
+            "status": "developing",
+            "requestBody": {
+              "type": "application/json",
+              "parameters": [],
+              "jsonSchema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "src",
+                    "dest"
+                  ],
+                  "properties": {
+                    "src": { "type": "string" },
+                    "dest": { "type": "string" }
+                  }
+                }
+              },
+              "examples": [
+                {
+                  "name": "示例",
+                  "value": "[\n  {\n    \"src\": \"/tmp/a.txt\",\n    \"dest\": \"/tmp/b.txt\"\n  }\n]",
+                  "mediaType": "application/json"
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "null"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        },
+        {
+          "name": "搜索文件",
+          "api": {
+            "method": "get",
+            "path": "/files/search",
+            "status": "developing",
+            "parameters": {
+              "query": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "required": true,
+                  "description": "搜索根目录",
+                  "example": "/tmp"
+                },
+                {
+                  "name": "pattern",
+                  "type": "string",
+                  "required": false,
+                  "description": "glob 模式，默认 **",
+                  "example": "*.txt"
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功",
+                "contentType": "json",
+                "jsonSchema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "path",
+                      "size",
+                      "modified_at",
+                      "created_at",
+                      "owner",
+                      "group",
+                      "mode"
+                    ],
+                    "properties": {
+                      "path": { "type": "string" },
+                      "size": { "type": "integer" },
+                      "modified_at": { "type": "integer" },
+                      "created_at": { "type": "integer" },
+                      "owner": { "type": "string" },
+                      "group": { "type": "string" },
+                      "mode": { "type": "integer" }
+                    }
+                  }
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        },
+        {
+          "name": "批量替换文件内容",
+          "api": {
+            "method": "post",
+            "path": "/files/replace",
+            "status": "developing",
+            "requestBody": {
+              "type": "application/json",
+              "parameters": [],
+              "jsonSchema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "required": [
+                    "old",
+                    "new"
+                  ],
+                  "properties": {
+                    "old": { "type": "string" },
+                    "new": { "type": "string" }
+                  }
+                }
+              },
+              "examples": [
+                {
+                  "name": "示例",
+                  "value": "{\n  \"/tmp/a.txt\": {\n    \"old\": \"foo\",\n    \"new\": \"bar\"\n  }\n}",
+                  "mediaType": "application/json"
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "null"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        },
+        {
+          "name": "上传文件",
+          "api": {
+            "method": "post",
+            "path": "/files/upload",
+            "status": "developing",
+            "requestBody": {
+              "type": "multipart/form-data",
+              "parameters": [
+                {
+                  "name": "metadata",
+                  "type": "file",
+                  "required": true,
+                  "description": "文件元数据 JSON 文件，需包含 path，可选 owner/group/mode"
+                },
+                {
+                  "name": "file",
+                  "type": "file",
+                  "required": true,
+                  "description": "实际文件内容，与 metadata 按顺序一一对应"
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "null"
+                }
+              },
+              {
+                "code": 400,
+                "name": "请求错误",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        },
+        {
+          "name": "下载文件",
+          "api": {
+            "method": "get",
+            "path": "/files/download",
+            "status": "developing",
+            "parameters": {
+              "query": [
+                {
+                  "name": "path",
+                  "type": "string",
+                  "required": true,
+                  "description": "文件路径",
+                  "example": "/tmp/a.txt"
+                }
+              ],
+              "header": [
+                {
+                  "name": "Range",
+                  "type": "string",
+                  "required": false,
+                  "description": "断点续传范围，如 bytes=0-1023"
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "完整下载",
+                "contentType": "application/octet-stream",
+                "jsonSchema": {
+                  "type": "string",
+                  "description": "二进制文件流"
+                }
+              },
+              {
+                "code": 206,
+                "name": "部分下载",
+                "contentType": "application/octet-stream",
+                "jsonSchema": {
+                  "type": "string",
+                  "description": "二进制文件分片流"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": [
+                {
+                  "name": "Accept-Ranges",
+                  "type": "string",
+                  "description": "服务端支持 bytes"
+                },
+                {
+                  "name": "Content-Range",
+                  "type": "string",
+                  "description": "部分下载时返回"
+                },
+                {
+                  "name": "Content-Disposition",
+                  "type": "string",
+                  "description": "附件文件名"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "创建目录",
+          "api": {
+            "method": "post",
+            "path": "/directories",
+            "status": "developing",
+            "requestBody": {
+              "type": "application/json",
+              "parameters": [],
+              "jsonSchema": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "owner": { "type": "string" },
+                    "group": { "type": "string" },
+                    "mode": { "type": "integer", "description": "八进制数字形式，如 755" }
+                  }
+                }
+              },
+              "examples": [
+                {
+                  "name": "示例",
+                  "value": "{\n  \"/tmp/demo/a/b\": {\n    \"mode\": 755\n  }\n}",
+                  "mediaType": "application/json"
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "null"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        },
+        {
+          "name": "删除目录",
+          "api": {
+            "method": "delete",
+            "path": "/directories",
+            "status": "developing",
+            "parameters": {
+              "query": [
+                {
+                  "name": "path",
+                  "type": "array",
+                  "required": false,
+                  "description": "递归删除目录路径，可重复传参",
+                  "example": [
+                    "/tmp/demo"
+                  ]
+                }
+              ]
+            },
+            "responses": [
+              {
+                "code": 200,
+                "name": "成功",
+                "contentType": "text/plain",
+                "jsonSchema": {
+                  "type": "null"
+                }
+              }
+            ],
+            "commonParameters": {
+              "query": [],
+              "body": [],
+              "cookie": [],
+              "header": []
+            }
+          }
+        }
+          ]
+        }
+      ]
+    }
+  ]
+}

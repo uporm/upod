@@ -16,7 +16,7 @@ pub enum WebError {
     Io(#[from] std::io::Error),
     #[error("System error: {0}")]
     Sys(String),
-    #[error("{0:?}")]
+    #[error("code={0}, args={1:?}")]
     BizWithArgs(i32, Vec<(String, String)>),
     #[error("{0}")]
     Biz(i32),

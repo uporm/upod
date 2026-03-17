@@ -44,7 +44,6 @@ pub enum Code {
     // 参数不合法：客户端请求包含非法参数
     IllegalParam = 902,
 
-
     // 校验相关错误码
     // 字段必填
     ValidationRequired = 1001,
@@ -69,6 +68,29 @@ pub enum Code {
     // 无效（未知的校验错误）
     ValidationUnknown = 1011,
 
+    // 沙箱相关错误
+    // 创建沙箱失败
+    SandboxCreateError = 2001,
+    // 镜像拉取失败
+    ImagePullError = 2002,
+    // 镜像不存在
+    ImageNotFound = 2003,
+    // 连接 Docker 失败
+    DockerConnectError = 2004,
+    // 删除沙箱失败
+    SandboxDeleteError = 2005,
+    // 沙箱不存在
+    SandboxNotFound = 2006,
+    // 获取沙箱详情失败
+    SandboxGetError = 2007,
+    // 沙箱生命周期操作失败
+    SandboxLifecycleError = 2008,
+    // 获取沙箱端点失败
+    SandboxEndpointError = 2009,
+    // 沙箱端点不存在
+    SandboxEndpointNotFound = 2010,
+    // 续期参数无效
+    InvalidRenewExpiration = 2011,
 }
 
 impl From<Code> for i32 {

@@ -7,13 +7,26 @@ use std::sync::OnceLock;
 
 #[derive(Debug, Deserialize)]
 pub struct AppConfig {
-    pub server_port: u16,
-    pub proxy: ProxyConfig,
+    pub server: ServerConfig,
+    pub gateway: GatewayConfig,
+    pub logger: LoggerConfig,
 }
 
 #[derive(Debug, Deserialize)]
-pub struct ProxyConfig {
-    pub server_port: u16,
+pub struct ServerConfig {
+    pub addr: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GatewayConfig {
+    pub addr: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LoggerConfig {
+    pub level: String,
+    pub console : bool,
+    pub filter_directives: Vec<String>,
 }
 
 static CONFIG: OnceLock<AppConfig> = OnceLock::new();

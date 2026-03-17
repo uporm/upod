@@ -2,13 +2,13 @@ use axum::{
     Router,
     routing::{get, post},
 };
-use upod_sandbox::handler::create_sandbox::create_sandbox;
-use upod_sandbox::handler::delete_sandbox::delete_sandbox;
-use upod_sandbox::handler::docker::start_expiration_cleanup_task;
-use upod_sandbox::handler::get_sandbox::get_sandbox;
-use upod_sandbox::handler::get_sandbox_endpoint::get_sandbox_endpoint;
-use upod_sandbox::handler::list_sandbox::list_sandboxes;
-use upod_sandbox::handler::sandbox_lifecycle::{
+use crate::handler::create_sandbox::create_sandbox;
+use crate::handler::delete_sandbox::delete_sandbox;
+use crate::handler::docker::start_expiration_cleanup_task;
+use crate::handler::get_sandbox::get_sandbox;
+use crate::handler::get_sandbox_endpoint::get_sandbox_endpoint;
+use crate::handler::list_sandbox::list_sandboxes;
+use crate::handler::sandbox_lifecycle::{
     pause_sandbox, renew_sandbox_expiration, resume_sandbox,
 };
 

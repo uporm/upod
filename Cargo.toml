@@ -2,8 +2,9 @@
 members = [
     "upod-app",
     "upod-base",
-    "upod-exec",
-    "upod-proxy",
-    "upod-sandbox",
+    "upod-bridge",
 ]
 resolver = "2"
+
+[profile.dev]
+debug = 0
