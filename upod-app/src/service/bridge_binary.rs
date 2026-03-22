@@ -23,6 +23,8 @@ pub(crate) fn resolve_bridge_binary_path() -> Result<PathBuf, WebError> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     if let Some(repo_root) = manifest_dir.parent() {
         candidates.push(repo_root.join("target/release/upod-bridge"));
+        candidates.push(repo_root.join("target/x86_64-unknown-linux-musl/release/upod-bridge"));
+        candidates.push(repo_root.join("target/aarch64-unknown-linux-musl/release/upod-bridge"));
         candidates.push(repo_root.join("target/x86_64-unknown-linux-gnu/release/upod-bridge"));
         candidates.push(repo_root.join("target/aarch64-unknown-linux-gnu/release/upod-bridge"));
     }

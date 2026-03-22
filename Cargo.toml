@@ -3,6 +3,7 @@ members = [
     "upod-app",
     "upod-base",
     "upod-bridge",
+    "upod-cli",
 ]
 resolver = "2"
 

@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 TARGET_TRIPLE="${1:-}"
+PACKAGE_DIR="${2:-}"
 HOST_OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 HOST_ARCH="$(uname -m)"
 
@@ -23,11 +24,12 @@ case "${EXEC_TARGET_ARCH}" in
     exit 1
     ;;
 esac
-EXEC_TARGET_TRIPLE="${EXEC_TARGET_ARCH}-unknown-linux-gnu"
+EXEC_TARGET_TRIPLE="${EXEC_TARGET_ARCH}-unknown-linux-musl"
 
 cd "${WORKSPACE_DIR}"
 
 if [[ "${HOST_OS}" == "linux" ]]; then
+  rustup target add "${EXEC_TARGET_TRIPLE}" || true
   cargo build --release --target "${EXEC_TARGET_TRIPLE}" -p upod-bridge
   EXEC_BUILD_OUTPUT_DIR="${WORKSPACE_DIR}/target/${EXEC_TARGET_TRIPLE}/release"
 else
@@ -36,13 +38,22 @@ else
       --platform "linux/${EXEC_DOCKER_ARCH}" \
       -v "${WORKSPACE_DIR}:${WORKSPACE_DIR}" \
       -w "${WORKSPACE_DIR}" \
-      rust:1 \
-      cargo build --release -p upod-bridge
-    EXEC_BUILD_OUTPUT_DIR="${WORKSPACE_DIR}/target/release"
+      rust:alpine \
+      sh -c "rustup target add ${EXEC_TARGET_TRIPLE} || true; cargo build --release --target ${EXEC_TARGET_TRIPLE} -p upod-bridge"
+    EXEC_BUILD_OUTPUT_DIR="${WORKSPACE_DIR}/target/${EXEC_TARGET_TRIPLE}/release"
   else
     echo "error: docker is required to build Linux upod-bridge on non-linux hosts" >&2
     exit 1
   fi
 fi
 
-echo "upod-bridge built: ${EXEC_BUILD_OUTPUT_DIR}/upod-bridge"
+rm -rf "${EXEC_BUILD_OUTPUT_DIR}/upod"
+mkdir -p "${EXEC_BUILD_OUTPUT_DIR}/upod"
+mv "${EXEC_BUILD_OUTPUT_DIR}/upod-bridge" "${EXEC_BUILD_OUTPUT_DIR}/upod/upod-bridge"
+
+if [[ -n "${PACKAGE_DIR}" ]]; then
+  mkdir -p "${PACKAGE_DIR}/bin"
+  cp "${EXEC_BUILD_OUTPUT_DIR}/upod/upod-bridge" "${PACKAGE_DIR}/bin/upod-bridge"
+fi
+
+echo "upod-bridge built: ${EXEC_BUILD_OUTPUT_DIR}/upod/upod-bridge"

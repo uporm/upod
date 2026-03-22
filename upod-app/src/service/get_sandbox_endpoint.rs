@@ -39,18 +39,18 @@ pub async fn get_sandbox_endpoint(
 /// - port：容器内端口。
 ///
 /// 返回：
-/// - 形如 `{base}/sandbox/{sandbox_id}/port/{port}` 的完整地址。
+/// - 形如 `{base}/sandboxes/{sandbox_id}/port/{port}` 的完整地址。
 ///
 /// 异常：
 /// - 无。
 fn build_sandbox_endpoint_url(sandbox_id: &str, port: u16) -> String {
     let base_url = resolve_endpoint_base_url();
-    format!("{base_url}/sandbox/{sandbox_id}/port/{port}")
+    format!("{base_url}/sandboxes/{sandbox_id}/port/{port}")
 }
 
 /// 解析端点基础地址。
 /// - 优先返回配置中的 `server.endpoint_base_url`。
-/// - 配置缺失时回退为 `http://{local_ip}:{server_port}`。
+/// - 配置缺失时回退为 `http://{local_ip}:{gateway_port}`。
 fn resolve_endpoint_base_url() -> String {
     let config = AppConfig::global();
     if let Some(base_url) = config.server.endpoint_base_url.as_deref() {
@@ -59,7 +59,7 @@ fn resolve_endpoint_base_url() -> String {
             return base_url;
         }
     }
-    let port = parse_server_port(&config.server.addr).unwrap_or(8080);
+    let port = parse_server_port(&config.gateway.addr).unwrap_or(9000);
     let ip = resolve_local_ip().unwrap_or_else(|| "127.0.0.1".to_string());
     format!("http://{ip}:{port}")
 }
@@ -141,7 +141,7 @@ mod tests {
         assert_eq!(resp.port, 8080);
         assert_eq!(
             resp.endpoint,
-            format!("http://localhost:8080/sandbox/{sandbox_id}/port/8080")
+            format!("http://localhost:9000/sandboxes/{sandbox_id}/port/8080")
         );
 
         clear_container(sandbox_id);

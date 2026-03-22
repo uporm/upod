@@ -35,8 +35,8 @@ pub async fn create_sandbox(req: CreateSandboxReq) -> Result<CreateSandboxResp, 
     ensure_image_exists(&docker, &req.image.uri).await?;
 
     let sandbox_id = resolve_sandbox_id(req.sandbox_id.as_deref());
-    // 超时时间至少为 1 秒，防止出现立即过期的异常行为。
-    let ttl_seconds = req.timeout.unwrap_or(3600).max(1);
+    // 超时时间至少为 6 秒，防止出现立即过期的异常行为。
+    let ttl_seconds = req.timeout.unwrap_or(6).max(1);
     let expires_at = (Utc::now() + Duration::seconds(ttl_seconds as i64)).to_rfc3339();
     let bridge_binary_host_path = resolve_bridge_binary_path()?;
 

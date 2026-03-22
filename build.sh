@@ -45,42 +45,17 @@ mkdir -p "${BIN_DIR}" "${CONFIG_DIR}"
 cd "${WORKSPACE_DIR}"
 
 build_upod_app() {
-  if [[ -n "${TARGET_TRIPLE}" ]]; then
-    cargo build --release --target "${TARGET_TRIPLE}" -p upod-app
-    APP_BUILD_OUTPUT_DIR="${WORKSPACE_DIR}/target/${TARGET_TRIPLE}/release"
-  else
-    cargo build --release -p upod-app
-    APP_BUILD_OUTPUT_DIR="${WORKSPACE_DIR}/target/release"
-  fi
+  bash "${WORKSPACE_DIR}/upod-app/build.sh" "${TARGET_TRIPLE}" "${PACKAGE_DIR}"
 }
 
 build_upod_exec_linux() {
-  bash "${WORKSPACE_DIR}/upod-bridge/build.sh" "${TARGET_TRIPLE}"
-}
-
-resolve_upod_exec_bin() {
-  local candidates=(
-    "${WORKSPACE_DIR}/target/release/upod-bridge"
-    "${WORKSPACE_DIR}/target/x86_64-unknown-linux-gnu/release/upod-bridge"
-    "${WORKSPACE_DIR}/target/aarch64-unknown-linux-gnu/release/upod-bridge"
-  )
-  local candidate
-  for candidate in "${candidates[@]}"; do
-    if [[ -f "${candidate}" ]]; then
-      EXEC_BUILD_OUTPUT_DIR="$(dirname "${candidate}")"
-      return 0
-    fi
-  done
-  echo "error: upod-bridge artifact not found after build" >&2
-  exit 1
+  bash "${WORKSPACE_DIR}/upod-bridge/build.sh" "${TARGET_TRIPLE}" "${PACKAGE_DIR}"
 }
 
 package_upod_release() {
-  cp "${APP_BUILD_OUTPUT_DIR}/upod" "${BIN_DIR}/upod"
-  cp "${EXEC_BUILD_OUTPUT_DIR}/upod-bridge" "${BIN_DIR}/upod-bridge"
-  cp "${WORKSPACE_DIR}/upod-app/resources/application.toml" "${CONFIG_DIR}/application.toml"
-  cp -R "${WORKSPACE_DIR}/upod-app/resources/locales" "${CONFIG_DIR}/locales"
-  chmod +x "${BIN_DIR}/upod" "${BIN_DIR}/upod-bridge"
+  if [[ -d "${BIN_DIR}" ]]; then
+    chmod +x "${BIN_DIR}/"* 2>/dev/null || true
+  fi
   ARCHIVE_PATH="${DIST_ROOT}/${RELEASE_NAME}.tar.gz"
   tar -C "${DIST_ROOT}" -czf "${ARCHIVE_PATH}" "${RELEASE_NAME}"
   echo "release package: ${ARCHIVE_PATH}"
@@ -89,13 +64,10 @@ package_upod_release() {
 case "${BUILD_SCOPE}" in
   exec)
     build_upod_exec_linux
-    resolve_upod_exec_bin
-    echo "upod-bridge built: ${EXEC_BUILD_OUTPUT_DIR}/upod-bridge"
     ;;
   upod|all)
     build_upod_app
     build_upod_exec_linux
-    resolve_upod_exec_bin
     package_upod_release
     ;;
   *)
