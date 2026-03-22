@@ -32,8 +32,8 @@ impl SandboxHandle {
         req: RunCommandReq,
         mut handlers: ExecutionHandlers,
     ) -> Result<()> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/command", endpoint_info.endpoint);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/command", bridge_url);
         
         let req_builder = self.client.inner.post(&url).json(&req);
         let mut event_source = EventSource::new(req_builder)
@@ -110,8 +110,8 @@ impl SandboxHandle {
     ///
     /// DELETE /command?id={id}
     pub async fn interrupt_command(&self, command_id: &str) -> Result<()> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/command?id={}", endpoint_info.endpoint, command_id);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/command?id={}", bridge_url, command_id);
         
         let response = self.client.inner.delete(&url).send().await?;
         let status = response.status();
@@ -127,8 +127,8 @@ impl SandboxHandle {
     ///
     /// GET /command/status/{id}
     pub async fn get_command_status(&self, command_id: &str) -> Result<CommandStatus> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/command/status/{}", endpoint_info.endpoint, command_id);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/command/status/{}", bridge_url, command_id);
         
         let response = self.client.inner.get(&url).send().await?;
         let status = response.status();
@@ -151,8 +151,8 @@ impl SandboxHandle {
     /// GET /command/output/{id}?cursor={cursor}
     /// 返回值：(日志字节内容, 下一次拉取的 cursor)
     pub async fn get_command_output(&self, command_id: &str, cursor: Option<usize>) -> Result<(Vec<u8>, usize)> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let mut url = format!("{}/command/output/{}", endpoint_info.endpoint, command_id);
+        let bridge_url = self.get_bridge_url(44321);
+        let mut url = format!("{}/command/output/{}", bridge_url, command_id);
         if let Some(c) = cursor {
             url.push_str(&format!("?cursor={}", c));
         }

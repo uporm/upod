@@ -5,7 +5,6 @@ use upod_base::web::r::R;
 
 use crate::models::sandbox::{
     CreateSandboxReq, CreateSandboxResp, GetSandboxResp, ListSandboxesReq, ListSandboxesResp,
-    SandboxEndpointResp,
 };
 
 pub async fn create_sandbox(Json(req): Json<CreateSandboxReq>) -> R<CreateSandboxResp> {
@@ -63,15 +62,6 @@ pub async fn get_sandbox(Path(sandbox_id): Path<String>) -> R<GetSandboxResp> {
 /// 成功时返回包含沙箱列表的 R<ListSandboxesResp>，失败时返回相应的错误 R 响应
 pub async fn list_sandboxes(QsQuery(req): QsQuery<ListSandboxesReq>) -> R<ListSandboxesResp> {
     match crate::service::list_sandboxes::list_sandboxes(req).await {
-        Ok(resp) => R::ok(resp),
-        Err(error) => R::err(error),
-    }
-}
-
-pub async fn get_sandbox_endpoint(
-    Path((sandbox_id, port)): Path<(String, u16)>,
-) -> R<SandboxEndpointResp> {
-    match crate::service::get_sandbox_endpoint::get_sandbox_endpoint(&sandbox_id, port).await {
         Ok(resp) => R::ok(resp),
         Err(error) => R::err(error),
     }

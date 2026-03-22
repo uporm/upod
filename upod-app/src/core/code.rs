@@ -85,10 +85,6 @@ pub enum Code {
     SandboxGetError = 2007,
     // 沙箱生命周期操作失败
     SandboxLifecycleError = 2008,
-    // 获取沙箱端点失败
-    SandboxEndpointError = 2009,
-    // 沙箱端点不存在
-    SandboxEndpointNotFound = 2010,
     // 续期参数无效
     InvalidRenewExpiration = 2011,
 }

@@ -119,15 +119,3 @@ pub struct RenewSandboxExpirationResp {
     #[serde(rename = "expiresAt")]
     pub expires_at: String,
 }
-
-/// 服务端点响应
-#[derive(Debug, Serialize)]
-pub struct SandboxEndpointResp {
-    /// 沙箱 ID
-    #[serde(rename = "sandboxId")]
-    pub sandbox_id: String,
-    /// 服务端口
-    pub port: u16,
-    /// 公开访问地址
-    pub endpoint: String,
-}

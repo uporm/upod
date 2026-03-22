@@ -39,9 +39,6 @@
 //!     sandbox.resume().await?;
 //!     println!("Sandbox resumed.");
 //!
-//!     let endpoint = sandbox.get_endpoint(8000).await?;
-//!     println!("Sandbox endpoint: {}", endpoint.endpoint);
-//!
 //!     // 4. 清理沙箱
 //!     sandbox.delete().await?;
 //!     println!("Sandbox deleted.");

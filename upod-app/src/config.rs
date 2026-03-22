@@ -15,7 +15,6 @@ pub struct AppConfig {
 #[derive(Debug, Deserialize)]
 pub struct ServerConfig {
     pub addr: String,
-    pub endpoint_base_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

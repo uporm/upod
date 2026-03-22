@@ -1,5 +1,5 @@
 use crate::handler::sandbox_management::{
-    create_sandbox, delete_sandbox, get_sandbox_endpoint,
+    create_sandbox, delete_sandbox,
     pause_sandbox, resume_sandbox, get_sandbox, list_sandboxes
 };
 use crate::service::sandbox_lifecycle::{
@@ -21,8 +21,4 @@ pub fn router() -> Router {
         .route("/v1/sandboxes/{sandbox_id}", delete(delete_sandbox))
         .route("/v1/sandboxes/{sandbox_id}/pause", post(pause_sandbox))
         .route("/v1/sandboxes/{sandbox_id}/resume", post(resume_sandbox))
-        .route(
-            "/v1/sandboxes/{sandbox_id}/endpoints/{port}",
-            get(get_sandbox_endpoint),
-        )
 }

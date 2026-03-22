@@ -111,12 +111,6 @@ impl UpodClient {
         Self::handle_empty_response(response).await
     }
 
-    /// 内部帮助方法：发起 GET 并返回 JSON
-    pub(crate) async fn get_json<T: for<'de> Deserialize<'de>>(&self, url: &str) -> Result<T> {
-        let response = self.inner.get(url).send().await?;
-        Self::handle_response::<T>(response).await
-    }
-
     /// 帮助方法：处理 HTTP 响应，但不要求反序列化具体数据
     pub(crate) async fn handle_empty_response(resp: Response) -> Result<()> {
         let status = resp.status();

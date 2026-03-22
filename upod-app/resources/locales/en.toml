@@ -36,6 +36,4 @@
 2006 = "Sandbox not found"
 2007 = "Failed to get sandbox detail: %{error}"
 2008 = "Failed to operate sandbox lifecycle: %{error}"
-2009 = "Failed to get sandbox endpoint: %{error}"
-2010 = "Sandbox endpoint not found"
 2011 = "Invalid renew expiration request"

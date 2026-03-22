@@ -68,15 +68,6 @@ pub struct SandboxInfo {
     pub created_at: String,
 }
 
-/// 端点信息，用于展示外部访问链接
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EndpointInfo {
-    pub sandbox_id: String,
-    pub port: u16,
-    pub endpoint: String,
-}
-
 /// 列表查询的响应数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ListSandboxResp {

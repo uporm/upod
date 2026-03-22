@@ -13,8 +13,8 @@ impl SandboxHandle {
     /// 
     /// DELETE /files?path=...&path=...
     pub async fn remove_files(&self, paths: &[String]) -> Result<()> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/files", endpoint_info.endpoint);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/files", bridge_url);
 
         let query: Vec<(&str, &String)> = paths.iter().map(|p| ("path", p)).collect();
         let response = self.client.inner.delete(&url).query(&query).send().await?;
@@ -31,8 +31,8 @@ impl SandboxHandle {
     /// 
     /// GET /files/info?path=...&path=...
     pub async fn get_files_info(&self, paths: &[String]) -> Result<HashMap<String, FileInfo>> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/files/info", endpoint_info.endpoint);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/files/info", bridge_url);
 
         let query: Vec<(&str, &String)> = paths.iter().map(|p| ("path", p)).collect();
         let response = self.client.inner.get(&url).query(&query).send().await?;
@@ -53,8 +53,8 @@ impl SandboxHandle {
     /// 
     /// POST /files/mv
     pub async fn rename_files(&self, items: &[RenameFileItem]) -> Result<()> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/files/mv", endpoint_info.endpoint);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/files/mv", bridge_url);
 
         let response = self.client.inner.post(&url).json(items).send().await?;
         let status = response.status();
@@ -70,8 +70,8 @@ impl SandboxHandle {
     /// 
     /// POST /files/permissions
     pub async fn chmod_files(&self, permissions: &HashMap<String, Permission>) -> Result<()> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/files/permissions", endpoint_info.endpoint);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/files/permissions", bridge_url);
 
         let response = self.client.inner.post(&url).json(permissions).send().await?;
         let status = response.status();
@@ -87,8 +87,8 @@ impl SandboxHandle {
     /// 
     /// GET /files/search?path=...&pattern=...
     pub async fn search_files(&self, path: &str, pattern: Option<&str>) -> Result<Vec<FileInfo>> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/files/search", endpoint_info.endpoint);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/files/search", bridge_url);
 
         let mut query = vec![("path", path)];
         if let Some(pat) = pattern {
@@ -113,8 +113,8 @@ impl SandboxHandle {
     /// 
     /// POST /files/replace
     pub async fn replace_content(&self, items: &HashMap<String, ReplaceFileContentItem>) -> Result<()> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/files/replace", endpoint_info.endpoint);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/files/replace", bridge_url);
 
         let response = self.client.inner.post(&url).json(items).send().await?;
         let status = response.status();
@@ -130,8 +130,8 @@ impl SandboxHandle {
     /// 
     /// POST /files/upload
     pub async fn upload_files(&self, files: &[(FileMetadata, Vec<u8>)]) -> Result<()> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/files/upload", endpoint_info.endpoint);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/files/upload", bridge_url);
 
         let mut form = reqwest::multipart::Form::new();
 
@@ -157,8 +157,8 @@ impl SandboxHandle {
     /// 
     /// GET /files/download?path=...
     pub async fn download_file(&self, path: &str) -> Result<Vec<u8>> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/files/download", endpoint_info.endpoint);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/files/download", bridge_url);
 
         let response = self.client.inner.get(&url).query(&[("path", path)]).send().await?;
         let status = response.status();
@@ -175,8 +175,8 @@ impl SandboxHandle {
     /// 
     /// POST /directories
     pub async fn make_directories(&self, directories: &HashMap<String, Permission>) -> Result<()> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/directories", endpoint_info.endpoint);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/directories", bridge_url);
 
         let response = self.client.inner.post(&url).json(directories).send().await?;
         let status = response.status();
@@ -192,8 +192,8 @@ impl SandboxHandle {
     /// 
     /// DELETE /directories?path=...&path=...
     pub async fn remove_directories(&self, paths: &[String]) -> Result<()> {
-        let endpoint_info = self.get_endpoint(44321).await?;
-        let url = format!("{}/directories", endpoint_info.endpoint);
+        let bridge_url = self.get_bridge_url(44321);
+        let url = format!("{}/directories", bridge_url);
 
         let query: Vec<(&str, &String)> = paths.iter().map(|p| ("path", p)).collect();
         let response = self.client.inner.delete(&url).query(&query).send().await?;

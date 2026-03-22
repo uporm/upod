@@ -3,7 +3,6 @@ use std::sync::Arc;
 use crate::{
     client::UpodClient,
     error::Result,
-    models::EndpointInfo,
 };
 
 /// 针对单个沙箱的操作句柄。
@@ -56,11 +55,19 @@ impl SandboxHandle {
         Ok(())
     }
 
-    /// 获取指定端口的访问入口（Endpoint）
-    ///
-    /// GET /v1/sandboxes/{sandbox_id}/endpoints/{port}
-    pub async fn get_endpoint(&self, port: u16) -> Result<EndpointInfo> {
-        let url = format!("{}/v1/sandboxes/{}/endpoints/{}", self.client.base_url, self.id, port);
-        self.client.get_json::<EndpointInfo>(&url).await
+    /// 内部获取桥接服务的代理地址
+    pub(crate) fn get_bridge_url(&self, port: u16) -> String {
+        let base = &self.client.base_url;
+        let gateway_url = if base.contains(":") {
+            let parts: Vec<&str> = base.rsplitn(2, ':').collect();
+            if parts.len() == 2 && parts[0].parse::<u16>().is_ok() {
+                format!("{}:9000", parts[1])
+            } else {
+                format!("{}:9000", base)
+            }
+        } else {
+            format!("{}:9000", base)
+        };
+        format!("{}/sandboxes/{}/port/{}", gateway_url, self.id, port)
     }
 }

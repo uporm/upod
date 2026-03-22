@@ -46,13 +46,6 @@ async fn test_sandbox_lifecycle() {
     sandbox.resume().await.expect("Failed to resume sandbox");
     println!("Sandbox resumed.");
     
-    // 4. 获取 Endpoint
-    println!("=== 4. Getting endpoint ===");
-    match sandbox.get_endpoint(8080).await {
-        Ok(endpoint) => println!("Got endpoint for port 8080: {}", endpoint.endpoint),
-        Err(e) => println!("Could not get endpoint (this is normal if not fully started): {}", e),
-    }
-
     // 5. 执行命令测试
     println!("=== 5. Running command ===");
     let cmd_req = RunCommandReq {
