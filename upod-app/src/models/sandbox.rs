@@ -4,6 +4,7 @@ use std::collections::HashMap;
 /// 创建沙箱的请求体
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CreateSandboxReq {
+    pub sandbox_id: Option<String>,
     /// 镜像信息
     pub image: Image,
     /// 入口点命令

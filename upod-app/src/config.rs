@@ -15,6 +15,7 @@ pub struct AppConfig {
 #[derive(Debug, Deserialize)]
 pub struct ServerConfig {
     pub addr: String,
+    pub endpoint_base_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -25,7 +26,7 @@ pub struct GatewayConfig {
 #[derive(Debug, Deserialize)]
 pub struct LoggerConfig {
     pub level: String,
-    pub console : bool,
+    pub console: bool,
     pub filter_directives: Vec<String>,
 }
 

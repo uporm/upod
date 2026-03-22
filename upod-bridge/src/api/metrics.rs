@@ -1,8 +1,8 @@
+#[cfg(any(target_os = "linux", test))]
+use std::collections::HashMap;
 use std::convert::Infallible;
 use std::process::Command as StdCommand;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-#[cfg(any(target_os = "linux", test))]
-use std::collections::HashMap;
 #[cfg(target_os = "linux")]
 use std::{fs, thread};
 
@@ -15,9 +15,9 @@ use tokio::time::MissedTickBehavior;
 use tokio_stream::StreamExt;
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-use crate::models::metrics::{Metrics, MetricsError};
 #[cfg(any(target_os = "linux", test))]
 use crate::models::metrics::CpuSample;
+use crate::models::metrics::{Metrics, MetricsError};
 
 /// 返回当前系统指标快照。
 /// 参数：无。
@@ -52,9 +52,8 @@ pub(crate) async fn watch_metrics() -> impl IntoResponse {
         }
     });
 
-    let stream = UnboundedReceiverStream::new(rx).map(|payload| {
-        Ok::<Event, Infallible>(Event::default().data(payload))
-    });
+    let stream = UnboundedReceiverStream::new(rx)
+        .map(|payload| Ok::<Event, Infallible>(Event::default().data(payload)));
     Sse::new(stream)
         .keep_alive(KeepAlive::new().interval(Duration::from_secs(10)))
         .into_response()
@@ -110,7 +109,8 @@ fn read_cpu_used_pct(cpu_count: f64) -> Result<f64, String> {
         if !output.status.success() {
             return Err(format!("ps 退出码异常: {}", output.status));
         }
-        let stdout = String::from_utf8(output.stdout).map_err(|error| format!("ps 输出编码错误: {error}"))?;
+        let stdout = String::from_utf8(output.stdout)
+            .map_err(|error| format!("ps 输出编码错误: {error}"))?;
         let mut sum = 0.0_f64;
         let mut count = 0_u64;
         for line in stdout.lines() {
@@ -142,8 +142,8 @@ fn read_cpu_used_pct(cpu_count: f64) -> Result<f64, String> {
 fn read_mem_mib() -> Result<(f64, f64), String> {
     #[cfg(target_os = "linux")]
     {
-        let content =
-            fs::read_to_string("/proc/meminfo").map_err(|error| format!("读取 /proc/meminfo 失败: {error}"))?;
+        let content = fs::read_to_string("/proc/meminfo")
+            .map_err(|error| format!("读取 /proc/meminfo 失败: {error}"))?;
         parse_linux_meminfo_mib(&content)
     }
     #[cfg(target_os = "macos")]
@@ -155,11 +155,10 @@ fn read_mem_mib() -> Result<(f64, f64), String> {
         if !vm_stat.status.success() {
             return Err(format!("vm_stat 退出码异常: {}", vm_stat.status));
         }
-        let output =
-            String::from_utf8(vm_stat.stdout).map_err(|error| format!("vm_stat 输出编码错误: {error}"))?;
+        let output = String::from_utf8(vm_stat.stdout)
+            .map_err(|error| format!("vm_stat 输出编码错误: {error}"))?;
         let (page_size, free_pages) = parse_vm_stat_pages(&output)?;
-        let used_bytes =
-            total_bytes.saturating_sub(free_pages.saturating_mul(page_size));
+        let used_bytes = total_bytes.saturating_sub(free_pages.saturating_mul(page_size));
         Ok((to_mib(total_bytes), to_mib(used_bytes)))
     }
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
@@ -174,7 +173,8 @@ fn read_mem_mib() -> Result<(f64, f64), String> {
 /// 异常：读取或解析 `/proc/stat` 失败时返回错误文本。
 #[cfg(target_os = "linux")]
 fn read_linux_cpu_sample() -> Result<CpuSample, String> {
-    let content = fs::read_to_string("/proc/stat").map_err(|error| format!("读取 /proc/stat 失败: {error}"))?;
+    let content = fs::read_to_string("/proc/stat")
+        .map_err(|error| format!("读取 /proc/stat 失败: {error}"))?;
     parse_linux_cpu_sample(&content)
 }
 
@@ -308,7 +308,8 @@ fn read_sysctl_u64(name: &str) -> Result<u64, String> {
     if !output.status.success() {
         return Err(format!("sysctl {name} 退出码异常: {}", output.status));
     }
-    let value = String::from_utf8(output.stdout).map_err(|error| format!("sysctl 输出编码错误: {error}"))?;
+    let value = String::from_utf8(output.stdout)
+        .map_err(|error| format!("sysctl 输出编码错误: {error}"))?;
     value
         .trim()
         .parse::<u64>()
@@ -342,8 +343,10 @@ mod tests {
     #[test]
     fn parse_linux_cpu_and_calc_used_pct() {
         println!("开始测试: parse_linux_cpu_and_calc_used_pct");
-        let first = parse_linux_cpu_sample("cpu  100 0 100 800 0 0 0 0 0 0\n").expect("parse first");
-        let second = parse_linux_cpu_sample("cpu  120 0 120 840 0 0 0 0 0 0\n").expect("parse second");
+        let first =
+            parse_linux_cpu_sample("cpu  100 0 100 800 0 0 0 0 0 0\n").expect("parse first");
+        let second =
+            parse_linux_cpu_sample("cpu  120 0 120 840 0 0 0 0 0 0\n").expect("parse second");
         let pct = calc_cpu_used_pct(first, second);
         println!("计算得到 CPU 使用率: {pct}");
         assert!((pct - 50.0).abs() < 0.001);

@@ -33,6 +33,11 @@
                   "image"
                 ],
                 "properties": {
+                  "sandbox_id": {
+                    "type": "string",
+                    "description": "自定义沙箱 ID（可选）",
+                    "example": "custom-sandbox-123"
+                  },
                   "image": {
                     "type": "object",
                     "required": [
@@ -106,7 +111,7 @@
               "examples": [
                 {
                   "name": "示例 1",
-                  "value": "{\n  \"image\": {\n    \"uri\": \"python:3.11-slim\"\n  },\n  \"entrypoint\": [\n    \"python\",\n    \"-c\",\n    \"print('Hello World')\"\n  ],\n  \"timeout\": 3600,\n  \"resourceLimits\": {\n    \"cpu\": \"500m\",\n    \"memory\": \"512Mi\"\n  },\n  \"env\": {\n    \"API_KEY\": \"secret-123\",\n    \"DEBUG\": \"true\"\n  },\n  \"metadata\": {\n    \"owner\": \"user1\",\n    \"project\": \"demo\"\n  }\n}",
+                  "value": "{\n  \"sandbox_id\": \"custom-sandbox-123\",\n  \"image\": {\n    \"uri\": \"python:3.11-slim\"\n  },\n  \"entrypoint\": [\n    \"python\",\n    \"-c\",\n    \"print('Hello World')\"\n  ],\n  \"timeout\": 3600,\n  \"resourceLimits\": {\n    \"cpu\": \"500m\",\n    \"memory\": \"512Mi\"\n  },\n  \"env\": {\n    \"API_KEY\": \"secret-123\",\n    \"DEBUG\": \"true\"\n  },\n  \"metadata\": {\n    \"owner\": \"user1\",\n    \"project\": \"demo\"\n  }\n}",
                   "mediaType": "application/json"
                 }
               ]
@@ -118,7 +123,10 @@
                 "contentType": "json",
                 "jsonSchema": {
                   "type": "object",
-                  "required": ["code", "message"],
+                  "required": [
+                    "code",
+                    "message"
+                  ],
                   "properties": {
                     "code": {
                       "type": "integer",
@@ -130,7 +138,10 @@
                     },
                     "data": {
                       "type": "object",
-                      "required": ["id", "warnings"],
+                      "required": [
+                        "id",
+                        "warnings"
+                      ],
                       "properties": {
                         "id": {
                           "type": "string",
@@ -167,9 +178,15 @@
               "query": [
                 {
                   "name": "state",
-                  "type": "string",
-                  "description": "按状态过滤（例如 running）",
-                  "example": "running"
+                  "type": "array",
+                  "description": "按状态过滤，支持多个状态（例如 state[]=running&state[]=exited）",
+                  "example": [
+                    "running",
+                    "exited"
+                  ],
+                  "items": {
+                    "type": "string"
+                  }
                 },
                 {
                   "name": "metadata",
@@ -289,7 +306,11 @@
                 "contentType": "json",
                 "jsonSchema": {
                   "type": "object",
-                  "required": ["code", "message", "data"],
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ],
                   "properties": {
                     "code": {
                       "type": "integer"
@@ -299,25 +320,52 @@
                     },
                     "data": {
                       "type": "object",
-                      "required": ["id", "name", "status", "image", "createdAt", "entrypoint", "env", "metadata"],
+                      "required": [
+                        "id",
+                        "name",
+                        "status",
+                        "image",
+                        "createdAt",
+                        "entrypoint",
+                        "env",
+                        "metadata"
+                      ],
                       "properties": {
-                        "id": { "type": "string" },
-                        "name": { "type": "string" },
-                        "status": { "type": "string" },
-                        "image": { "type": "string" },
-                        "createdAt": { "type": "string" },
-                        "startedAt": { "type": "string" },
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "image": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "startedAt": {
+                          "type": "string"
+                        },
                         "entrypoint": {
                           "type": "array",
-                          "items": { "type": "string" }
+                          "items": {
+                            "type": "string"
+                          }
                         },
                         "env": {
                           "type": "array",
-                          "items": { "type": "string" }
+                          "items": {
+                            "type": "string"
+                          }
                         },
                         "metadata": {
                           "type": "object",
-                          "additionalProperties": { "type": "string" }
+                          "additionalProperties": {
+                            "type": "string"
+                          }
                         }
                       }
                     }
@@ -356,7 +404,10 @@
                 "contentType": "json",
                 "jsonSchema": {
                   "type": "object",
-                  "required": ["code", "message"],
+                  "required": [
+                    "code",
+                    "message"
+                  ],
                   "properties": {
                     "code": {
                       "type": "integer"
@@ -402,7 +453,10 @@
                 "contentType": "json",
                 "jsonSchema": {
                   "type": "object",
-                  "required": ["code", "message"],
+                  "required": [
+                    "code",
+                    "message"
+                  ],
                   "properties": {
                     "code": {
                       "type": "integer"
@@ -445,87 +499,16 @@
                 "contentType": "json",
                 "jsonSchema": {
                   "type": "object",
-                  "required": ["code", "message"],
+                  "required": [
+                    "code",
+                    "message"
+                  ],
                   "properties": {
                     "code": {
                       "type": "integer"
                     },
                     "message": {
                       "type": "string"
-                    }
-                  }
-                }
-              }
-            ],
-            "commonParameters": {
-              "query": [],
-              "body": [],
-              "cookie": [],
-              "header": []
-            }
-          }
-        },
-        {
-          "name": "续期沙箱",
-          "api": {
-            "method": "post",
-            "path": "/v1/sandboxes/{sandbox_id}/renew-expiration",
-            "status": "developing",
-            "parameters": {
-              "path": [
-                {
-                  "name": "sandbox_id",
-                  "type": "string",
-                  "description": "沙箱 ID",
-                  "example": "sandbox-123"
-                }
-              ]
-            },
-            "requestBody": {
-              "type": "application/json",
-              "parameters": [],
-              "jsonSchema": {
-                "type": "object",
-                "required": ["ttlSeconds"],
-                "properties": {
-                  "ttlSeconds": {
-                    "type": "integer",
-                    "description": "续期秒数",
-                    "example": 3600
-                  }
-                }
-              },
-              "examples": [
-                {
-                  "name": "示例 1",
-                  "value": "{\n  \"ttlSeconds\": 3600\n}",
-                  "mediaType": "application/json"
-                }
-              ]
-            },
-            "responses": [
-              {
-                "code": 200,
-                "name": "成功",
-                "contentType": "json",
-                "jsonSchema": {
-                  "type": "object",
-                  "required": ["code", "message", "data"],
-                  "properties": {
-                    "code": {
-                      "type": "integer"
-                    },
-                    "message": {
-                      "type": "string"
-                    },
-                    "data": {
-                      "type": "object",
-                      "required": ["expiresAt"],
-                      "properties": {
-                        "expiresAt": {
-                          "type": "string"
-                        }
-                      }
                     }
                   }
                 }
@@ -568,7 +551,11 @@
                 "contentType": "json",
                 "jsonSchema": {
                   "type": "object",
-                  "required": ["code", "message", "data"],
+                  "required": [
+                    "code",
+                    "message",
+                    "data"
+                  ],
                   "properties": {
                     "code": {
                       "type": "integer"
@@ -578,11 +565,21 @@
                     },
                     "data": {
                       "type": "object",
-                      "required": ["sandboxId", "port", "endpoint"],
+                      "required": [
+                        "sandboxId",
+                        "port",
+                        "endpoint"
+                      ],
                       "properties": {
-                        "sandboxId": { "type": "string" },
-                        "port": { "type": "integer" },
-                        "endpoint": { "type": "string" }
+                        "sandboxId": {
+                          "type": "string"
+                        },
+                        "port": {
+                          "type": "integer"
+                        },
+                        "endpoint": {
+                          "type": "string"
+                        }
                       }
                     }
                   }

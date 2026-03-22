@@ -74,7 +74,6 @@ impl R<()> {
     }
 }
 
-
 impl<T: Serialize> IntoResponse for R<T> {
     fn into_response(self) -> axum::response::Response {
         let status = StatusCode::from_u16(self.code as u16).unwrap_or(StatusCode::OK);

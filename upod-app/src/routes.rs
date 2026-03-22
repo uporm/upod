@@ -1,31 +1,26 @@
+use crate::handler::sandbox_management::{
+    create_sandbox, delete_sandbox, get_sandbox_endpoint,
+    pause_sandbox, resume_sandbox, get_sandbox, list_sandboxes
+};
+use crate::service::sandbox_lifecycle::{
+    start_expiration_cleanup_task, start_sandbox_store_sync_task,
+};
 use axum::{
     Router,
     routing::{get, post},
 };
-use crate::handler::create_sandbox::create_sandbox;
-use crate::handler::delete_sandbox::delete_sandbox;
-use crate::handler::docker::start_expiration_cleanup_task;
-use crate::handler::get_sandbox::get_sandbox;
-use crate::handler::get_sandbox_endpoint::get_sandbox_endpoint;
-use crate::handler::list_sandbox::list_sandboxes;
-use crate::handler::sandbox_lifecycle::{
-    pause_sandbox, renew_sandbox_expiration, resume_sandbox,
-};
+use axum::routing::delete;
 
 pub fn router() -> Router {
+    start_sandbox_store_sync_task();
     start_expiration_cleanup_task();
     Router::new()
-        .route("/v1/sandboxes", post(create_sandbox).get(list_sandboxes))
-        .route(
-            "/v1/sandboxes/{sandbox_id}",
-            get(get_sandbox).delete(delete_sandbox),
-        )
+        .route("/v1/sandboxes", get(list_sandboxes))
+        .route("/v1/sandboxes/{sandbox_id}", get(get_sandbox))
+        .route("/v1/sandboxes", post(create_sandbox))
+        .route("/v1/sandboxes/{sandbox_id}", delete(delete_sandbox))
         .route("/v1/sandboxes/{sandbox_id}/pause", post(pause_sandbox))
         .route("/v1/sandboxes/{sandbox_id}/resume", post(resume_sandbox))
-        .route(
-            "/v1/sandboxes/{sandbox_id}/renew-expiration",
-            post(renew_sandbox_expiration),
-        )
         .route(
             "/v1/sandboxes/{sandbox_id}/endpoints/{port}",
             get(get_sandbox_endpoint),

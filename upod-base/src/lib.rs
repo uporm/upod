@@ -1,5 +1,5 @@
-pub mod web;
 pub mod core;
+pub mod web;
 
 use rust_i18n::i18n;
 i18n!("locales");

@@ -44,7 +44,6 @@ pub enum Code {
     // 参数不合法：客户端请求包含非法参数
     IllegalParam = 902,
 
-
     // 校验相关错误码
     // 字段必填
     ValidationRequired = 1001,
@@ -92,7 +91,6 @@ pub enum Code {
     SandboxEndpointNotFound = 2010,
     // 续期参数无效
     InvalidRenewExpiration = 2011,
-
 }
 
 impl From<Code> for i32 {

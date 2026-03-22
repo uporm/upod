@@ -41,3 +41,4 @@ pingora = { version = "0.8.0", features = ["proxy"] }
 async-trait = "0.1.89"
 uuid = { version = "1.18.1", features = ["v4"] }
 tar = "0.4.44"
+dashmap = "6.1.0"

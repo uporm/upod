@@ -1,14 +1,10 @@
-use std::future::Future;
-
-use crate::web::error::WebError;
 use crate::web::middleware::fallback;
 use crate::web::middleware::i18n::handle_i18n;
-use axum::extract::Request;
-use axum::middleware::{Next, from_fn};
-use axum::response::Response;
-use axum::{Router, middleware};
+use axum::Router;
+use axum::middleware::from_fn;
 use tokio::signal;
 use tracing::{error, info};
+use upod_base::web::error::WebError;
 
 pub struct WebServer {
     router: Router,
@@ -28,16 +24,6 @@ impl WebServer {
     pub fn layer_i18n(mut self) -> Self {
         self.middlewares
             .push(Box::new(|r| r.layer(from_fn(handle_i18n))));
-        self
-    }
-
-    pub fn layer_fn<F, Fut>(mut self, f: F) -> Self
-    where
-        F: Clone + Send + Sync + 'static + Fn(Request, Next) -> Fut,
-        Fut: Future<Output = Response> + Send + 'static,
-    {
-        self.middlewares
-            .push(Box::new(|r| r.layer(middleware::from_fn(f))));
         self
     }
 

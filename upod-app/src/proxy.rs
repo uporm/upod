@@ -1,15 +1,10 @@
-use std::collections::HashMap;
-
 use async_trait::async_trait;
-use bollard::errors::Error as DockerError;
-use bollard::query_parameters::ListContainersOptions;
-use bollard::Docker;
 use pingora::http::RequestHeader;
 use pingora::prelude::*;
 use pingora::proxy::{ProxyHttp, Session, http_proxy_service};
-use tracing::warn;
+use tracing::{info, warn};
 
-use crate::handler::docker::SANDBOX_ID_LABEL;
+use crate::service::sandbox_store;
 
 /// 启动沙盒代理服务，监听指定地址。
 ///
@@ -59,23 +54,59 @@ impl ProxyHttp for SandboxProxy {
     }
 
     /// 解析目标容器地址并构建上游连接。
-    async fn upstream_peer(&self, session: &mut Session, ctx: &mut Self::CTX) -> Result<Box<HttpPeer>> {
-        // 从原始请求路径中提取 sandbox_id / port / 重写后的 path+query。
+    ///
+    /// 1. 从请求路径解析出 `sandbox_id` 和容器内端口 `container_port`。
+    /// 2. 从 `sandbox_store` 查询该沙箱的端口映射关系。
+    /// 3. 将请求转发到宿主机的 `127.0.0.1:{host_port}`。
+    async fn upstream_peer(
+        &self,
+        session: &mut Session,
+        ctx: &mut Self::CTX,
+    ) -> Result<Box<HttpPeer>> {
         let request_header = session.req_header();
-        let (sandbox_id, port, rewritten_path) = parse_proxy_path(request_header).ok_or_else(|| {
+        info!("Incoming proxy request: uri={}", request_header.uri);
+        
+        // 从原始请求路径中提取 sandbox_id / container_port / 重写后的 path+query。
+        let (sandbox_id, container_port, rewritten_path) =
+            parse_proxy_path(request_header).ok_or_else(|| {
+                warn!("parse_proxy_path failed for uri: {}", request_header.uri);
+                Error::explain(
+                    ErrorType::HTTPStatus(404),
+                    "path should match /sandboxes/{sandbox_id}/port/{port}[/{full_path}]",
+                )
+            })?;
+
+        // 从内存存储中获取沙箱信息
+        let container = sandbox_store::get_container(&sandbox_id).ok_or_else(|| {
+            warn!("sandbox not found in store: {}", sandbox_id);
             Error::explain(
                 ErrorType::HTTPStatus(404),
-                "path should match /sandboxes/{sandbox_id}/endpoints/{port}[/{full_path}]",
+                format!("sandbox not found in store: {sandbox_id}"),
             )
         })?;
 
-        // 通过 sandbox_id 查询容器 IP，并将后续阶段所需信息写入上下文。
-        let host = resolve_container_ip(&sandbox_id).await?;
-        ctx.rewritten_path_with_query = rewritten_path;
-        ctx.upstream_authority = format!("{host}:{port}");
+        // 查找容器内端口对应的宿主机映射端口
+        let host_port = container.ports.get(&container_port).copied().ok_or_else(|| {
+            warn!("port {} is not mapped for sandbox {}, available ports: {:?}", container_port, sandbox_id, container.ports);
+            Error::explain(
+                ErrorType::HTTPStatus(404),
+                format!("port {container_port} is not mapped for sandbox {sandbox_id}"),
+            )
+        })?;
 
-        // 这里使用明文 HTTP（第二个参数为 false），由内网容器通信场景决定。
-        Ok(Box::new(HttpPeer::new((host.as_str(), port), false, String::new())))
+        info!("Proxying {} to 127.0.0.1:{}", sandbox_id, host_port);
+
+        // 由于使用了端口映射，直接请求宿主机本地地址即可
+        let host = "127.0.0.1";
+        ctx.rewritten_path_with_query = rewritten_path;
+        ctx.upstream_authority = format!("{host}:{host_port}");
+
+        // 这里使用明文 HTTP（第二个参数为 false），转发到宿主机映射端口
+        Ok(Box::new(HttpPeer::new(
+            (host, host_port),
+            false,
+            String::new(),
+        )))
     }
 
     /// 转发前重写 URI 和 Host。
@@ -119,15 +150,15 @@ fn rewrite_upstream_request(
     Ok(())
 }
 
-/// 解析路径 `/sandboxes/{sandbox_id}/endpoints/{port}[/{full_path}]`。
+/// 解析路径 `/sandboxes/{sandbox_id}/port/{port}[/{full_path}]`。
 fn parse_proxy_path(header: &RequestHeader) -> Option<(String, u16, String)> {
     // 仅处理约定的网关前缀，非目标路径直接返回 None。
     let path = header.uri.path();
     let prefix = "/sandboxes/";
     let rest = path.strip_prefix(prefix)?;
 
-    // 拆分出 sandbox_id 与 endpoints 之后的部分。
-    let (sandbox_id, rest) = rest.split_once("/endpoints/")?;
+    // 拆分出 sandbox_id 与 port 之后的部分。
+    let (sandbox_id, rest) = rest.split_once("/port/")?;
     if sandbox_id.is_empty() {
         return None;
     }
@@ -148,92 +179,34 @@ fn parse_proxy_path(header: &RequestHeader) -> Option<(String, u16, String)> {
     Some((sandbox_id.to_string(), port, rewritten))
 }
 
-/// 根据 sandbox_id 查找容器 IP。
-async fn resolve_container_ip(sandbox_id: &str) -> Result<String> {
-    // 每次查询时创建 Docker 客户端，避免跨请求共享状态带来的复杂生命周期问题。
-    let docker = Docker::connect_with_local_defaults().map_err(docker_error)?;
-    let container_id = resolve_container_id(&docker, sandbox_id).await?;
-    let detail = docker
-        .inspect_container(&container_id, None)
-        .await
-        .map_err(docker_error)?;
 
-    // 从容器网络配置中选取第一个可用 IP。
-    // 在多网络场景下，当前策略是“按遍历顺序取第一个非空地址”。
-    if let Some(network_settings) = &detail.network_settings
-        && let Some(networks) = &network_settings.networks
-    {
-        for endpoint in networks.values() {
-            if let Some(ip) = endpoint.ip_address.as_deref()
-                && !ip.is_empty()
-            {
-                return Ok(ip.to_string());
-            }
-        }
-    }
-
-    Err(Error::explain(
-        ErrorType::new("sandbox_endpoint_not_found"),
-        format!("sandbox endpoint not found for sandbox_id={sandbox_id}"),
-    ))
-}
-
-/// 根据 sandbox_id 查找容器 ID，支持直接 ID 与 label 匹配。
-async fn resolve_container_id(docker: &Docker, sandbox_id: &str) -> Result<String> {
-    // 快路径：把 sandbox_id 当作容器 ID 直接 inspect，且要求存在约定 label，防止误命中无关容器。
-    if let Ok(detail) = docker.inspect_container(sandbox_id, None).await
-        && detail
-            .config
-            .as_ref()
-            .and_then(|config| config.labels.as_ref())
-            .and_then(|labels| labels.get(SANDBOX_ID_LABEL))
-            .is_some()
-    {
-        return Ok(detail.id.unwrap_or_else(|| sandbox_id.to_string()));
-    }
-
-    // 慢路径：按 `SANDBOX_ID_LABEL=sandbox_id` 过滤容器列表。
-    let mut filters = HashMap::new();
-    filters.insert(
-        "label".to_string(),
-        vec![format!("{SANDBOX_ID_LABEL}={sandbox_id}")],
-    );
-
-    let containers = docker
-        .list_containers(Some(ListContainersOptions {
-            all: true,
-            filters: Some(filters),
-            ..Default::default()
-        }))
-        .await
-        .map_err(docker_error)?;
-
-    // 命中第一个容器即返回；当前语义默认一个 sandbox_id 对应一个容器。
-    if let Some(id) = containers.into_iter().find_map(|item| item.id) {
-        return Ok(id);
-    }
-
-    Err(Error::explain(
-        ErrorType::new("sandbox_not_found"),
-        format!("sandbox not found: {sandbox_id}"),
-    ))
-}
-
-/// 将 Docker 错误转换为统一代理错误。
-fn docker_error(error: DockerError) -> Box<Error> {
-    warn!("docker operation failed: {}", error);
-    Error::explain(ErrorType::new("docker_error"), error.to_string())
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    fn parse_proxy_path_user_example() {
+        // 模拟用户给出的真实场景：
+        // http://localhost:9000/sandboxes/ff222/port/44321/command -> http://127.0.0.1:52323/command
+        let req = RequestHeader::build(
+            "GET",
+            b"/sandboxes/ff222/port/44321/command",
+            None,
+        )
+        .unwrap();
+        let parsed = parse_proxy_path(&req).unwrap();
+
+        assert_eq!(parsed.0, "ff222"); // sandbox_id
+        assert_eq!(parsed.1, 44321);   // container_port
+        assert_eq!(parsed.2, "/command"); // rewritten_path
+    }
+
+    #[test]
     fn parse_proxy_path_with_suffix_and_query() {
         let req = RequestHeader::build(
             "GET",
-            b"/sandboxes/sandbox-1/endpoints/8080/api/v1/ping?hello=world",
+            b"/sandboxes/sandbox-1/port/8080/api/v1/ping?hello=world",
             None,
         )
         .unwrap();
@@ -246,7 +219,7 @@ mod tests {
 
     #[test]
     fn parse_proxy_path_with_root_suffix() {
-        let req = RequestHeader::build("GET", b"/sandboxes/abc/endpoints/3000/", None).unwrap();
+        let req = RequestHeader::build("GET", b"/sandboxes/abc/port/3000/", None).unwrap();
         let parsed = parse_proxy_path(&req).unwrap();
 
         assert_eq!(parsed.0, "abc");
@@ -256,18 +229,14 @@ mod tests {
 
     #[test]
     fn parse_proxy_path_reject_invalid_port() {
-        let req = RequestHeader::build(
-            "GET",
-            b"/sandboxes/abc/endpoints/not-port/index",
-            None,
-        )
-        .unwrap();
+        let req =
+            RequestHeader::build("GET", b"/sandboxes/abc/port/not-port/index", None).unwrap();
         assert!(parse_proxy_path(&req).is_none());
     }
 
     #[test]
     fn parse_proxy_path_allow_empty_suffix_path() {
-        let req = RequestHeader::build("GET", b"/sandboxes/abc/endpoints/3000", None).unwrap();
+        let req = RequestHeader::build("GET", b"/sandboxes/abc/port/3000", None).unwrap();
         let parsed = parse_proxy_path(&req).unwrap();
 
         assert_eq!(parsed.0, "abc");
@@ -277,9 +246,8 @@ mod tests {
 
     #[test]
     fn parse_proxy_path_allow_empty_suffix_path_with_query() {
-        let req =
-            RequestHeader::build("GET", b"/sandboxes/abc/endpoints/3000?token=hello", None)
-                .unwrap();
+        let req = RequestHeader::build("GET", b"/sandboxes/abc/port/3000?token=hello", None)
+            .unwrap();
         let parsed = parse_proxy_path(&req).unwrap();
 
         assert_eq!(parsed.0, "abc");
