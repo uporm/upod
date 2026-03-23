@@ -6,7 +6,8 @@ use crate::api::command::command_log::get_command_output;
 use crate::api::command::command_status::get_command_status;
 use crate::api::filesystem::directory_transfer::{make_directories, remove_directories};
 use crate::api::filesystem::file_operations::{
-    chmod_files, get_files_info, remove_files, rename_files, replace_content, search_files,
+    chmod_files, get_files_info, list_files, remove_files, rename_files, replace_content,
+    search_files,
 };
 use crate::api::filesystem::file_transfer::{download_file, upload_file};
 use crate::api::metrics::{get_metrics, watch_metrics};
@@ -19,6 +20,7 @@ pub fn router() -> Router {
         .route("/command/output/{id}", get(get_command_output))
         .route("/files", delete(remove_files))
         .route("/files/info", get(get_files_info))
+        .route("/files", get(list_files))
         .route("/files/mv", post(rename_files))
         .route("/files/permissions", post(chmod_files))
         .route("/files/search", get(search_files))

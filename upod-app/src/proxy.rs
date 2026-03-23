@@ -65,10 +65,10 @@ impl ProxyHttp for SandboxProxy {
     ) -> Result<Box<HttpPeer>> {
         let request_header = session.req_header();
         info!("Incoming proxy request: uri={}", request_header.uri);
-        
+
         // 从原始请求路径中提取 sandbox_id / container_port / 重写后的 path+query。
-        let (sandbox_id, container_port, rewritten_path) =
-            parse_proxy_path(request_header).ok_or_else(|| {
+        let (sandbox_id, container_port, rewritten_path) = parse_proxy_path(request_header)
+            .ok_or_else(|| {
                 warn!("parse_proxy_path failed for uri: {}", request_header.uri);
                 Error::explain(
                     ErrorType::HTTPStatus(404),
@@ -86,13 +86,20 @@ impl ProxyHttp for SandboxProxy {
         })?;
 
         // 查找容器内端口对应的宿主机映射端口
-        let host_port = container.ports.get(&container_port).copied().ok_or_else(|| {
-            warn!("port {} is not mapped for sandbox {}, available ports: {:?}", container_port, sandbox_id, container.ports);
-            Error::explain(
-                ErrorType::HTTPStatus(404),
-                format!("port {container_port} is not mapped for sandbox {sandbox_id}"),
-            )
-        })?;
+        let host_port = container
+            .ports
+            .get(&container_port)
+            .copied()
+            .ok_or_else(|| {
+                warn!(
+                    "port {} is not mapped for sandbox {}, available ports: {:?}",
+                    container_port, sandbox_id, container.ports
+                );
+                Error::explain(
+                    ErrorType::HTTPStatus(404),
+                    format!("port {container_port} is not mapped for sandbox {sandbox_id}"),
+                )
+            })?;
 
         info!("Proxying {} to 127.0.0.1:{}", sandbox_id, host_port);
 
@@ -179,8 +186,6 @@ fn parse_proxy_path(header: &RequestHeader) -> Option<(String, u16, String)> {
     Some((sandbox_id.to_string(), port, rewritten))
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -189,16 +194,12 @@ mod tests {
     fn parse_proxy_path_user_example() {
         // 模拟用户给出的真实场景：
         // http://localhost:9000/sandboxes/ff222/port/44321/command -> http://127.0.0.1:52323/command
-        let req = RequestHeader::build(
-            "GET",
-            b"/sandboxes/ff222/port/44321/command",
-            None,
-        )
-        .unwrap();
+        let req =
+            RequestHeader::build("GET", b"/sandboxes/ff222/port/44321/command", None).unwrap();
         let parsed = parse_proxy_path(&req).unwrap();
 
         assert_eq!(parsed.0, "ff222"); // sandbox_id
-        assert_eq!(parsed.1, 44321);   // container_port
+        assert_eq!(parsed.1, 44321); // container_port
         assert_eq!(parsed.2, "/command"); // rewritten_path
     }
 
@@ -229,8 +230,7 @@ mod tests {
 
     #[test]
     fn parse_proxy_path_reject_invalid_port() {
-        let req =
-            RequestHeader::build("GET", b"/sandboxes/abc/port/not-port/index", None).unwrap();
+        let req = RequestHeader::build("GET", b"/sandboxes/abc/port/not-port/index", None).unwrap();
         assert!(parse_proxy_path(&req).is_none());
     }
 
@@ -246,8 +246,8 @@ mod tests {
 
     #[test]
     fn parse_proxy_path_allow_empty_suffix_path_with_query() {
-        let req = RequestHeader::build("GET", b"/sandboxes/abc/port/3000?token=hello", None)
-            .unwrap();
+        let req =
+            RequestHeader::build("GET", b"/sandboxes/abc/port/3000?token=hello", None).unwrap();
         let parsed = parse_proxy_path(&req).unwrap();
 
         assert_eq!(parsed.0, "abc");

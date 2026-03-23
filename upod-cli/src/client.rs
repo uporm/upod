@@ -28,7 +28,7 @@ impl UpodClient {
         let inner = ReqwestClient::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()?;
-            
+
         Ok(Arc::new(Self { inner, base_url }))
     }
 
@@ -42,14 +42,11 @@ impl UpodClient {
     /// POST /v1/sandboxes
     pub async fn create_sandbox(self: &Arc<Self>, req: CreateSandboxReq) -> Result<SandboxHandle> {
         let url = format!("{}/v1/sandboxes", self.base_url);
-        
-        let response = self.inner.post(&url)
-            .json(&req)
-            .send()
-            .await?;
-            
+
+        let response = self.inner.post(&url).json(&req).send().await?;
+
         let sandbox_resp = Self::handle_response::<CreateSandboxResp>(response).await?;
-        
+
         Ok(SandboxHandle::new(Arc::clone(self), sandbox_resp.id))
     }
 
@@ -57,14 +54,14 @@ impl UpodClient {
     ///
     /// 此处并没有直接发出请求（除非想获取完整详细状态）。
     /// 按照面向对象设计，通常先拿到句柄，在句柄上直接操作即可，降低重复传参和不必要的 API 校验开销。
-    /// 
+    ///
     /// GET /v1/sandboxes/{sandbox_id} -> 在实际业务中可能用于校验 id 是否存在
     pub async fn get_sandbox(self: &Arc<Self>, id: &str) -> Result<SandboxHandle> {
         let url = format!("{}/v1/sandboxes/{}", self.base_url, id);
         // 如果想严格检查沙箱存活，可以在此处发起网络请求，若成功则返回句柄。
         let response = self.inner.get(&url).send().await?;
         Self::handle_response::<SandboxInfo>(response).await?;
-        
+
         Ok(SandboxHandle::new(Arc::clone(self), id.to_string()))
     }
 
@@ -87,7 +84,7 @@ impl UpodClient {
             let message = resp.text().await.unwrap_or_else(|_| "Unknown Error".into());
             return Err(UpodError::Api { status, message });
         }
-        
+
         let api_resp = resp.json::<ApiResponse<T>>().await?;
         if api_resp.code != 0 && api_resp.code != 200 {
             return Err(UpodError::Api {
@@ -95,8 +92,10 @@ impl UpodClient {
                 message: api_resp.message,
             });
         }
-        
-        api_resp.data.ok_or_else(|| UpodError::Client("Response data is missing".into()))
+
+        api_resp
+            .data
+            .ok_or_else(|| UpodError::Client("Response data is missing".into()))
     }
 
     /// 内部帮助方法：发起无参 POST 请求（如 pause/resume 等动作）
@@ -118,7 +117,7 @@ impl UpodClient {
             let message = resp.text().await.unwrap_or_else(|_| "Unknown Error".into());
             return Err(UpodError::Api { status, message });
         }
-        
+
         let api_resp = resp.json::<ApiResponse<serde_json::Value>>().await?;
         if api_resp.code != 0 && api_resp.code != 200 {
             return Err(UpodError::Api {
@@ -126,7 +125,7 @@ impl UpodClient {
                 message: api_resp.message,
             });
         }
-        
+
         Ok(())
     }
 }

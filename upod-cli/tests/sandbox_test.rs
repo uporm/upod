@@ -1,4 +1,4 @@
-use upod_cli::{models::CreateSandboxReq, models::RunCommandReq, UpodClient};
+use upod_cli::{UpodClient, models::CreateSandboxReq, models::RunCommandReq};
 
 #[tokio::test]
 async fn test_client_creation() {
@@ -10,12 +10,14 @@ async fn test_client_creation() {
 #[ignore = "requires running upod service"]
 async fn test_sandbox_lifecycle() {
     let client = UpodClient::new("http://localhost:8080").expect("Failed to create client");
-    
+
     // 1. 创建沙箱
     println!("=== 1. Creating sandbox ===");
     let req = CreateSandboxReq {
         sandbox_id: None,
-        image: upod_cli::models::Image { uri: "alpine:latest".to_string() },
+        image: upod_cli::models::Image {
+            uri: "alpine:latest".to_string(),
+        },
         entrypoint: None,
         timeout: None,
         resource_limits: Some(upod_cli::models::ResourceLimits {
@@ -25,27 +27,33 @@ async fn test_sandbox_lifecycle() {
         env: None,
         metadata: None,
     };
-    
-    let sandbox = client.create_sandbox(req).await.expect("Failed to create sandbox");
+
+    let sandbox = client
+        .create_sandbox(req)
+        .await
+        .expect("Failed to create sandbox");
     let sandbox_id = sandbox.id().to_string();
     println!("Successfully created sandbox with ID: {}", sandbox_id);
-    
+
     // 2. 获取沙箱列表并验证
     println!("=== 2. Listing sandboxes ===");
-    let sandboxes = client.list_sandboxes().await.expect("Failed to list sandboxes");
+    let sandboxes = client
+        .list_sandboxes()
+        .await
+        .expect("Failed to list sandboxes");
     println!("Current active sandboxes count: {}", sandboxes.len());
     assert!(sandboxes.iter().any(|s| s.id == sandbox_id));
-    
+
     // 3. 暂停和恢复
     println!("=== 3. Pausing and resuming sandbox ===");
     sandbox.pause().await.expect("Failed to pause sandbox");
     println!("Sandbox paused.");
-    
+
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-    
+
     sandbox.resume().await.expect("Failed to resume sandbox");
     println!("Sandbox resumed.");
-    
+
     // 5. 执行命令测试
     println!("=== 5. Running command ===");
     let cmd_req = RunCommandReq {
@@ -54,7 +62,7 @@ async fn test_sandbox_lifecycle() {
         background: Some(false),
         timeout: None,
     };
-    
+
     let handlers = upod_cli::command::ExecutionHandlers {
         on_stdout: Some(Box::new(|text| {
             println!("Received event: {}", text);
@@ -64,11 +72,11 @@ async fn test_sandbox_lifecycle() {
         })),
         ..Default::default()
     };
-    
+
     match sandbox.run_command(cmd_req, handlers).await {
         Ok(_) => {
             println!("Command execution started, waiting for events...");
-        },
+        }
         Err(e) => println!("Failed to start command: {}", e),
     }
 

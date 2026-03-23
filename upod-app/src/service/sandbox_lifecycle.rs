@@ -9,11 +9,13 @@
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use bollard::errors::Error as DockerError;
-use bollard::query_parameters::{ListContainersOptions, RemoveContainerOptions, StopContainerOptions};
 use bollard::Docker;
+use bollard::errors::Error as DockerError;
+use bollard::query_parameters::{
+    ListContainersOptions, RemoveContainerOptions, StopContainerOptions,
+};
 use chrono::{DateTime, Utc};
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 
 use crate::core::code::Code;
 use upod_base::web::error::WebError;
@@ -25,7 +27,7 @@ pub(crate) const SANDBOX_ID_LABEL: &str = "upod.io/sandbox-id";
 pub(crate) const SANDBOX_EXPIRES_AT_LABEL: &str = "upod.io/expires-at";
 
 use super::sandbox_store::{
-    clear_container, get_containers, replace_all_containers, SandboxContainer,
+    SandboxContainer, clear_container, get_containers, replace_all_containers,
 };
 
 /// 清理任务启动标记
@@ -112,7 +114,10 @@ pub(crate) async fn force_remove_sandbox(sandbox_id: &str) -> Result<bool, WebEr
     } else {
         // 如果缓存没有，通过 Docker label 查找，避免漏删
         let mut filters = HashMap::new();
-        filters.insert("label".to_string(), vec![format!("{}={}", SANDBOX_ID_LABEL, sandbox_id)]);
+        filters.insert(
+            "label".to_string(),
+            vec![format!("{}={}", SANDBOX_ID_LABEL, sandbox_id)],
+        );
         let containers = docker
             .list_containers(Some(ListContainersOptions {
                 all: true,
@@ -120,10 +125,12 @@ pub(crate) async fn force_remove_sandbox(sandbox_id: &str) -> Result<bool, WebEr
                 ..Default::default()
             }))
             .await
-            .map_err(|e| WebError::BizWithArgs(
-                Code::SandboxDeleteError.into(),
-                vec![("error".to_string(), e.to_string())]
-            ))?;
+            .map_err(|e| {
+                WebError::BizWithArgs(
+                    Code::SandboxDeleteError.into(),
+                    vec![("error".to_string(), e.to_string())],
+                )
+            })?;
 
         if let Some(c) = containers.into_iter().next() {
             c.id.unwrap_or_default()
@@ -136,7 +143,9 @@ pub(crate) async fn force_remove_sandbox(sandbox_id: &str) -> Result<bool, WebEr
     let _ = docker.unpause_container(&container_id).await;
 
     // 2. 尝试优雅停止容器，忽略可能的错误
-    let _ = docker.stop_container(&container_id, None::<StopContainerOptions>).await;
+    let _ = docker
+        .stop_container(&container_id, None::<StopContainerOptions>)
+        .await;
 
     // 3. 强制删除容器并清理内存记录
     match docker
@@ -163,7 +172,7 @@ pub(crate) async fn force_remove_sandbox(sandbox_id: &str) -> Result<bool, WebEr
         }
         Err(error) => Err(WebError::BizWithArgs(
             Code::SandboxDeleteError.into(),
-            vec![("error".to_string(), error.to_string())]
+            vec![("error".to_string(), error.to_string())],
         )),
     }
 }
@@ -335,7 +344,13 @@ fn extract_ports_from_detail(
                     // 解析内部端口
                     let private_port = port_key.split_once('/')?.0.parse::<u16>().ok()?;
                     // 解析绑定的宿主机端口
-                    let host_port = bindings.as_ref()?.first()?.host_port.as_ref()?.parse::<u16>().ok()?;
+                    let host_port = bindings
+                        .as_ref()?
+                        .first()?
+                        .host_port
+                        .as_ref()?
+                        .parse::<u16>()
+                        .ok()?;
                     Some((private_port, host_port))
                 })
                 .collect()

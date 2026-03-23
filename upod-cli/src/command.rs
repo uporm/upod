@@ -34,7 +34,7 @@ impl SandboxHandle {
     ) -> Result<()> {
         let bridge_url = self.get_bridge_url(44321);
         let url = format!("{}/command", bridge_url);
-        
+
         let req_builder = self.client.inner.post(&url).json(&req);
         let mut event_source = EventSource::new(req_builder)
             .map_err(|e| UpodError::Client(format!("Failed to create EventSource: {}", e)))?;
@@ -50,25 +50,19 @@ impl SandboxHandle {
                     if let Ok(stream_event) = serde_json::from_str::<StreamEvent>(&message.data) {
                         match stream_event.event_type {
                             StreamEventType::SessionInit => {
-                                if let Some(ref mut cb) = handlers.on_session_init {
-                                    if let Some(text) = stream_event.text {
-                                        cb(text);
-                                    }
-                                }
+                                if let (Some(ref mut cb), Some(text)) = (handlers.on_session_init.as_mut(), stream_event.text) {
+                                cb(text);
+                            }
                             }
                             StreamEventType::StdoutLine => {
-                                if let Some(ref mut cb) = handlers.on_stdout {
-                                    if let Some(text) = stream_event.text {
-                                        cb(text);
-                                    }
-                                }
+                                if let (Some(ref mut cb), Some(text)) = (handlers.on_stdout.as_mut(), stream_event.text) {
+                                cb(text);
+                            }
                             }
                             StreamEventType::StderrLine => {
-                                if let Some(ref mut cb) = handlers.on_stderr {
-                                    if let Some(text) = stream_event.text {
-                                        cb(text);
-                                    }
-                                }
+                                if let (Some(ref mut cb), Some(text)) = (handlers.on_stderr.as_mut(), stream_event.text) {
+                                cb(text);
+                            }
                             }
                             StreamEventType::ExecutionComplete => {
                                 if let Some(ref mut cb) = handlers.on_execution_complete {
@@ -85,7 +79,10 @@ impl SandboxHandle {
                                     .error
                                     .map(|e| e.evalue)
                                     .unwrap_or_else(|| "Unknown execution error".to_string());
-                                return Err(UpodError::Client(format!("Command execution error: {}", err_msg)));
+                                return Err(UpodError::Client(format!(
+                                    "Command execution error: {}",
+                                    err_msg
+                                )));
                             }
                             // 忽略其他无关事件
                             _ => {}
@@ -112,14 +109,17 @@ impl SandboxHandle {
     pub async fn interrupt_command(&self, command_id: &str) -> Result<()> {
         let bridge_url = self.get_bridge_url(44321);
         let url = format!("{}/command?id={}", bridge_url, command_id);
-        
+
         let response = self.client.inner.delete(&url).send().await?;
         let status = response.status();
         if status.is_success() {
             Ok(())
         } else {
             let text = response.text().await.unwrap_or_default();
-            Err(UpodError::Api { status, message: text })
+            Err(UpodError::Api {
+                status,
+                message: text,
+            })
         }
     }
 
@@ -129,20 +129,24 @@ impl SandboxHandle {
     pub async fn get_command_status(&self, command_id: &str) -> Result<CommandStatus> {
         let bridge_url = self.get_bridge_url(44321);
         let url = format!("{}/command/status/{}", bridge_url, command_id);
-        
+
         let response = self.client.inner.get(&url).send().await?;
         let status = response.status();
         if status.is_success() {
             let body = response.text().await?;
             match serde_json::from_str::<CommandStatus>(&body) {
                 Ok(data) => Ok(data),
-                Err(e) => {
-                    Err(UpodError::Client(format!("Failed to parse CommandStatus: {} from body: {}", e, body)))
-                }
+                Err(e) => Err(UpodError::Client(format!(
+                    "Failed to parse CommandStatus: {} from body: {}",
+                    e, body
+                ))),
             }
         } else {
             let text = response.text().await.unwrap_or_default();
-            Err(UpodError::Api { status, message: text })
+            Err(UpodError::Api {
+                status,
+                message: text,
+            })
         }
     }
 
@@ -150,13 +154,17 @@ impl SandboxHandle {
     ///
     /// GET /command/output/{id}?cursor={cursor}
     /// 返回值：(日志字节内容, 下一次拉取的 cursor)
-    pub async fn get_command_output(&self, command_id: &str, cursor: Option<usize>) -> Result<(Vec<u8>, usize)> {
+    pub async fn get_command_output(
+        &self,
+        command_id: &str,
+        cursor: Option<usize>,
+    ) -> Result<(Vec<u8>, usize)> {
         let bridge_url = self.get_bridge_url(44321);
         let mut url = format!("{}/command/output/{}", bridge_url, command_id);
         if let Some(c) = cursor {
             url.push_str(&format!("?cursor={}", c));
         }
-        
+
         let response = self.client.inner.get(&url).send().await?;
         let status = response.status();
         if status.is_success() {
@@ -172,7 +180,10 @@ impl SandboxHandle {
             Ok((bytes.to_vec(), next_cursor))
         } else {
             let text = response.text().await.unwrap_or_default();
-            Err(UpodError::Api { status, message: text })
+            Err(UpodError::Api {
+                status,
+                message: text,
+            })
         }
     }
 }

@@ -7,14 +7,14 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 #[cfg(target_os = "linux")]
 use std::{fs, thread};
 
-use axum::http::StatusCode;
-use axum::response::sse::{Event, KeepAlive, Sse};
-use axum::response::IntoResponse;
 use axum::Json;
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::response::sse::{Event, KeepAlive, Sse};
 use tokio::sync::mpsc;
 use tokio::time::MissedTickBehavior;
-use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_stream::StreamExt;
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
 #[cfg(any(target_os = "linux", test))]
 use crate::models::metrics::CpuSample;
@@ -49,19 +49,20 @@ pub(crate) async fn watch_metrics() -> impl IntoResponse {
         let mut ticker = tokio::time::interval(Duration::from_secs(1));
         // 确保当系统负载高导致错失 Tick 时，直接顺延，避免短时间内突发大量采集请求
         ticker.set_missed_tick_behavior(MissedTickBehavior::Delay);
-        
+
         loop {
             ticker.tick().await;
-            
+
             let payload = match collect_metrics().await {
                 Ok(metrics) => serde_json::to_string(&metrics).unwrap_or_else(|_| "{}".to_string()),
                 Err(error) => {
                     let err_res = MetricsError { error };
-                    serde_json::to_string(&err_res)
-                        .unwrap_or_else(|_| r#"{"error":"unknown serialization error"}"#.to_string())
+                    serde_json::to_string(&err_res).unwrap_or_else(|_| {
+                        r#"{"error":"unknown serialization error"}"#.to_string()
+                    })
                 }
             };
-            
+
             // 如果客户端断开连接，tx.send 会失败，此时安全退出后台任务，避免协程泄漏
             if tx.send(payload).is_err() {
                 break;
@@ -71,7 +72,7 @@ pub(crate) async fn watch_metrics() -> impl IntoResponse {
 
     let stream = UnboundedReceiverStream::new(rx)
         .map(|payload| Ok::<Event, Infallible>(Event::default().data(payload)));
-        
+
     Sse::new(stream)
         .keep_alive(KeepAlive::new().interval(Duration::from_secs(10)))
         .into_response()
@@ -101,10 +102,10 @@ fn read_metrics_blocking() -> Result<Metrics, String> {
     let cpu_count = std::thread::available_parallelism()
         .map(|value| value.get() as f64)
         .unwrap_or(1.0);
-        
+
     let cpu_used_pct = read_cpu_used_pct(cpu_count)?;
     let (mem_total_mib, mem_used_mib) = read_mem_mib()?;
-    
+
     Ok(Metrics {
         cpu_count,
         cpu_used_pct,
@@ -130,21 +131,21 @@ fn read_cpu_used_pct(cpu_count: f64) -> Result<f64, String> {
         let second = read_linux_cpu_sample()?;
         Ok(calc_cpu_used_pct(first, second))
     }
-    
+
     #[cfg(target_os = "macos")]
     {
         let output = StdCommand::new("ps")
             .args(["-A", "-o", "%cpu="])
             .output()
             .map_err(|error| format!("执行 ps 命令失败: {error}"))?;
-            
+
         if !output.status.success() {
             return Err(format!("ps 退出码异常: {}", output.status));
         }
-        
+
         let stdout = String::from_utf8(output.stdout)
             .map_err(|error| format!("ps 输出非 UTF-8 编码: {error}"))?;
-            
+
         // 采用函数式迭代，安全过滤空行与解析错误行，避免了手动状态维护
         let parsed_values: Vec<f64> = stdout
             .lines()
@@ -158,11 +159,11 @@ fn read_cpu_used_pct(cpu_count: f64) -> Result<f64, String> {
         }
 
         let sum: f64 = parsed_values.into_iter().sum();
-        
+
         // 确保结果不会因为超载等异常情况超出 100% 边界
         Ok((sum / cpu_count).clamp(0.0, 100.0))
     }
-    
+
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         let _ = cpu_count;
@@ -183,27 +184,27 @@ fn read_mem_mib() -> Result<(f64, f64), String> {
             .map_err(|error| format!("读取 /proc/meminfo 失败: {error}"))?;
         parse_linux_meminfo_mib(&content)
     }
-    
+
     #[cfg(target_os = "macos")]
     {
         let total_bytes = read_sysctl_u64("hw.memsize")?;
         let vm_stat = StdCommand::new("vm_stat")
             .output()
             .map_err(|error| format!("执行 vm_stat 失败: {error}"))?;
-            
+
         if !vm_stat.status.success() {
             return Err(format!("vm_stat 退出码异常: {}", vm_stat.status));
         }
-        
+
         let output = String::from_utf8(vm_stat.stdout)
             .map_err(|error| format!("vm_stat 输出非 UTF-8 编码: {error}"))?;
-            
+
         let (page_size, free_pages) = parse_vm_stat_pages(&output)?;
         // 使用 saturating_sub 避免并发波动导致的数值溢出，保证健壮性
         let used_bytes = total_bytes.saturating_sub(free_pages.saturating_mul(page_size));
         Ok((to_mib(total_bytes), to_mib(used_bytes)))
     }
-    
+
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         Err("当前平台暂不支持内存指标采集".to_string())
@@ -235,12 +236,12 @@ fn parse_linux_cpu_sample(content: &str) -> Result<CpuSample, String> {
         .lines()
         .next()
         .ok_or_else(|| "/proc/stat 内容为空，缺失首行".to_string())?;
-        
+
     let fields: Vec<&str> = first.split_whitespace().collect();
     if fields.len() < 5 || fields[0] != "cpu" {
         return Err("不符合预期的 /proc/stat 'cpu' 行格式".to_string());
     }
-    
+
     // 解析时间片，安全跳过首位字符串
     let mut numbers = Vec::with_capacity(fields.len().saturating_sub(1));
     for raw in fields.iter().skip(1) {
@@ -249,11 +250,11 @@ fn parse_linux_cpu_sample(content: &str) -> Result<CpuSample, String> {
                 .map_err(|error| format!("无法将 CPU 字段 '{raw}' 解析为整数: {error}"))?,
         );
     }
-    
+
     // idle 时间 = idle (下标3) + iowait (下标4)
     let idle = numbers.get(3).copied().unwrap_or(0) + numbers.get(4).copied().unwrap_or(0);
     let total = numbers.into_iter().sum::<u64>();
-    
+
     Ok(CpuSample { idle, total })
 }
 
@@ -263,6 +264,7 @@ fn parse_linux_cpu_sample(content: &str) -> Result<CpuSample, String> {
 /// **参数**：
 /// - `first`: 前一次采样的 `CpuSample`。
 /// - `second`: 后一次采样的 `CpuSample`。
+///
 /// **返回值**：0.0 到 100.0 的浮点数。
 /// **异常**：不会报错；如遇到负增量或除零，安全回退到 0.0。
 #[cfg(any(target_os = "linux", test))]
@@ -271,10 +273,10 @@ fn calc_cpu_used_pct(first: CpuSample, second: CpuSample) -> f64 {
     if total_delta == 0 {
         return 0.0;
     }
-    
+
     let idle_delta = second.idle.saturating_sub(first.idle);
     let used_delta = total_delta.saturating_sub(idle_delta);
-    
+
     (used_delta as f64 * 100.0 / total_delta as f64).clamp(0.0, 100.0)
 }
 
@@ -287,7 +289,7 @@ fn calc_cpu_used_pct(first: CpuSample, second: CpuSample) -> f64 {
 #[cfg(any(target_os = "linux", test))]
 fn parse_linux_meminfo_mib(content: &str) -> Result<(f64, f64), String> {
     let mut map = HashMap::<String, u64>::new();
-    
+
     for line in content.lines() {
         let Some((key, rest)) = line.split_once(':') else {
             continue;
@@ -301,7 +303,7 @@ fn parse_linux_meminfo_mib(content: &str) -> Result<(f64, f64), String> {
         .get("MemTotal")
         .copied()
         .ok_or_else(|| "/proc/meminfo 缺失基础字段 'MemTotal'".to_string())?;
-        
+
     // 优先采用现代内核提供的 MemAvailable，若无则手动通过 Free+Buffers+Cached 近似计算
     let available_kib = map
         .get("MemAvailable")
@@ -313,9 +315,9 @@ fn parse_linux_meminfo_mib(content: &str) -> Result<(f64, f64), String> {
             Some(free + buffers + cached)
         })
         .ok_or_else(|| "/proc/meminfo 缺失可用内存相关字段".to_string())?;
-        
+
     let used_kib = total_kib.saturating_sub(available_kib);
-    
+
     Ok((total_kib as f64 / 1024.0, used_kib as f64 / 1024.0))
 }
 
@@ -331,7 +333,7 @@ fn parse_first_u64(text: &str) -> Option<u64> {
         .skip_while(|char| !char.is_ascii_digit())
         .take_while(|char| char.is_ascii_digit())
         .collect();
-        
+
     if digits.is_empty() {
         return None;
     }
@@ -347,14 +349,16 @@ fn parse_first_u64(text: &str) -> Option<u64> {
 #[cfg(any(target_os = "macos", test))]
 fn parse_vm_stat_pages(content: &str) -> Result<(u64, u64), String> {
     let mut lines = content.lines();
-    let header = lines.next().ok_or_else(|| "vm_stat 命令输出完全为空".to_string())?;
-    
+    let header = lines
+        .next()
+        .ok_or_else(|| "vm_stat 命令输出完全为空".to_string())?;
+
     let page_size = parse_first_u64(header)
         .ok_or_else(|| "vm_stat 首行缺失页面大小 (page size) 信息".to_string())?;
 
     let mut free_pages = 0_u64;
     let mut speculative_pages = 0_u64;
-    
+
     for line in lines {
         let Some((key, value)) = line.split_once(':') else {
             continue;
@@ -382,14 +386,14 @@ fn read_sysctl_u64(name: &str) -> Result<u64, String> {
         .args(["-n", name])
         .output()
         .map_err(|error| format!("执行 sysctl -n {name} 失败: {error}"))?;
-        
+
     if !output.status.success() {
         return Err(format!("sysctl {name} 退出码异常: {}", output.status));
     }
-    
+
     let value = String::from_utf8(output.stdout)
         .map_err(|error| format!("sysctl 输出包含非 UTF-8 字符: {error}"))?;
-        
+
     value
         .trim()
         .parse::<u64>()
@@ -424,8 +428,10 @@ mod tests {
 
     #[test]
     fn parse_linux_cpu_and_calc_used_pct() {
-        let first = parse_linux_cpu_sample("cpu  100 0 100 800 0 0 0 0 0 0\n").expect("parse first");
-        let second = parse_linux_cpu_sample("cpu  120 0 120 840 0 0 0 0 0 0\n").expect("parse second");
+        let first =
+            parse_linux_cpu_sample("cpu  100 0 100 800 0 0 0 0 0 0\n").expect("parse first");
+        let second =
+            parse_linux_cpu_sample("cpu  120 0 120 840 0 0 0 0 0 0\n").expect("parse second");
         let pct = calc_cpu_used_pct(first, second);
         assert!((pct - 50.0).abs() < 0.001);
     }

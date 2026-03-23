@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use upod_cli::{
+    SandboxHandle, UpodClient,
     models::{CreateSandboxReq, RunCommandReq},
-    UpodClient, SandboxHandle,
 };
 
 /// 辅助函数：创建测试沙箱
@@ -10,7 +10,9 @@ async fn setup_test_sandbox() -> (Arc<UpodClient>, SandboxHandle) {
 
     let req = CreateSandboxReq {
         sandbox_id: Some("test-sandbox".to_string()),
-        image: upod_cli::models::Image { uri: "alpine:latest".to_string() },
+        image: upod_cli::models::Image {
+            uri: "alpine:latest".to_string(),
+        },
         entrypoint: None,
         timeout: None,
         resource_limits: Some(upod_cli::models::ResourceLimits {
@@ -20,7 +22,7 @@ async fn setup_test_sandbox() -> (Arc<UpodClient>, SandboxHandle) {
         env: None,
         metadata: None,
     };
-    
+
     let sandbox = client
         .create_sandbox(req)
         .await
@@ -43,7 +45,10 @@ async fn teardown_test_sandbox(sandbox: SandboxHandle) {
 async fn test_run_command_handlers() {
     let (_client, sandbox) = setup_test_sandbox().await;
     let sandbox_id = sandbox.id().to_string();
-    println!("=== [Test] Running command with handlers in sandbox {} ===", sandbox_id);
+    println!(
+        "=== [Test] Running command with handlers in sandbox {} ===",
+        sandbox_id
+    );
 
     let handlers = upod_cli::command::ExecutionHandlers {
         on_stdout: Some(Box::new(|text| {
@@ -58,15 +63,19 @@ async fn test_run_command_handlers() {
         ..Default::default()
     };
 
-    match sandbox.run_command(
-        RunCommandReq {
-            command: "echo 'Hello Handlers!' && sleep 1 && echo 'Handlers finished.'".to_string(),
-            cwd: None,
-            background: Some(false),
-            timeout: None,
-        },
-        handlers,
-    ).await {
+    match sandbox
+        .run_command(
+            RunCommandReq {
+                command: "echo 'Hello Handlers!' && sleep 1 && echo 'Handlers finished.'"
+                    .to_string(),
+                cwd: None,
+                background: Some(false),
+                timeout: None,
+            },
+            handlers,
+        )
+        .await
+    {
         Ok(_) => println!("Command executed successfully with handlers."),
         Err(e) => panic!("Failed to run command with handlers: {}", e),
     }
@@ -80,7 +89,10 @@ async fn test_run_command_handlers() {
 async fn test_run_command_background_and_interrupt() {
     let (_client, sandbox) = setup_test_sandbox().await;
     let sandbox_id = sandbox.id().to_string();
-    println!("=== [Test] Running background command and interrupting it in sandbox {} ===", sandbox_id);
+    println!(
+        "=== [Test] Running background command and interrupting it in sandbox {} ===",
+        sandbox_id
+    );
 
     let bg_cmd_req = RunCommandReq {
         command: "echo 'Start long task' && sleep 10 && echo 'Should not reach here'".to_string(),
@@ -128,7 +140,10 @@ async fn test_run_command_background_and_interrupt() {
 async fn test_run_command_status_and_logs() {
     let (_client, sandbox) = setup_test_sandbox().await;
     let sandbox_id = sandbox.id().to_string();
-    println!("=== [Test] Checking command status and getting logs in sandbox {} ===", sandbox_id);
+    println!(
+        "=== [Test] Checking command status and getting logs in sandbox {} ===",
+        sandbox_id
+    );
 
     let bg_cmd_req = RunCommandReq {
         command: "echo 'Start task for logs' && sleep 2 && echo 'Task completed'".to_string(),
@@ -160,7 +175,7 @@ async fn test_run_command_status_and_logs() {
 
     // 等待命令执行一部分
     tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
-    
+
     println!("\n=== Checking command status ===");
     match sandbox.get_command_status(&extracted_id).await {
         Ok(status) => {
@@ -177,7 +192,10 @@ async fn test_run_command_status_and_logs() {
             let log_str = String::from_utf8_lossy(&bytes);
             println!("Command Log Output:\n{}", log_str);
             println!("Next Cursor for logs: {}", next_cursor);
-            assert!(log_str.contains("Start task for logs"), "Logs should contain initial output");
+            assert!(
+                log_str.contains("Start task for logs"),
+                "Logs should contain initial output"
+            );
         }
         Err(e) => panic!("Failed to get command logs: {}", e),
     }

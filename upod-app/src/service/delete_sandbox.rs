@@ -84,7 +84,7 @@ mod tests {
                 container_id: id.clone(),
                 ports: HashMap::new(),
                 expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
-            }
+            },
         );
 
         let result = delete_sandbox(sandbox_id).await;

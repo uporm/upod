@@ -55,7 +55,10 @@ pub async fn create_sandbox(req: CreateSandboxReq) -> Result<CreateSandboxResp, 
         .await
         .map_err(sandbox_create_error)?;
 
-    debug!("sandbox {} created, ports: {:?}", sandbox_id, container_config.ports);
+    debug!(
+        "sandbox {} created, ports: {:?}",
+        sandbox_id, container_config.ports
+    );
     register_container(
         &sandbox_id,
         SandboxContainer {
@@ -118,22 +121,25 @@ fn build_container_config(
     // 注入系统标签，供后续生命周期回收和检索使用。
     labels.insert(SANDBOX_ID_LABEL.to_string(), sandbox_id.to_string());
     labels.insert(SANDBOX_EXPIRES_AT_LABEL.to_string(), expires_at.to_string());
-    
+
     let exposed_ports = vec!["8080/tcp".to_string(), "44321/tcp".to_string()];
     let mut port_bindings = HashMap::new();
     let mut ports = HashMap::new();
-    
+
     for port_str in &exposed_ports {
         let (private_port_text, _) = port_str.split_once('/').unwrap_or((port_str, ""));
         let private_port = private_port_text.parse::<u16>().unwrap_or(0);
-        
+
         let host_port = crate::utils::port::find_random_available_port().map_err(|e| {
             WebError::BizWithArgs(
                 Code::SandboxCreateError.into(),
-                vec![("error".to_string(), format!("failed to allocate port: {}", e))],
+                vec![(
+                    "error".to_string(),
+                    format!("failed to allocate port: {}", e),
+                )],
             )
         })?;
-        
+
         port_bindings.insert(
             port_str.clone(),
             Some(vec![PortBinding {
@@ -192,7 +198,10 @@ fn build_runtime_command(req: &CreateSandboxReq) -> Vec<String> {
 /// 构建容器 HostConfig 并应用资源限制。
 /// 参数 req 为创建请求；返回可直接用于 Docker 的 HostConfig。
 /// 资源格式非法时会被忽略，不在此函数抛错。
-fn build_host_config(req: &CreateSandboxReq, port_bindings: HashMap<String, Option<Vec<PortBinding>>>) -> HostConfig {
+fn build_host_config(
+    req: &CreateSandboxReq,
+    port_bindings: HashMap<String, Option<Vec<PortBinding>>>,
+) -> HostConfig {
     let mut host_config = HostConfig {
         port_bindings: Some(port_bindings),
         ..Default::default()
@@ -336,15 +345,19 @@ mod tests {
             metadata: None,
         };
 
-        let container_config = build_container_config(&req, "sandbox-test", "2026-03-17T00:00:00Z").unwrap();
+        let container_config =
+            build_container_config(&req, "sandbox-test", "2026-03-17T00:00:00Z").unwrap();
         let config = container_config.config;
 
         let exposed_ports = config.exposed_ports.expect("exposed ports should exist");
         assert!(exposed_ports.contains(&"8080/tcp".to_string()));
         assert!(exposed_ports.contains(&"44321/tcp".to_string()));
-        
+
         let host_port_8080 = container_config.ports.get(&8080).expect("should map 8080");
-        let host_port_44321 = container_config.ports.get(&44321).expect("should map 44321");
+        let host_port_44321 = container_config
+            .ports
+            .get(&44321)
+            .expect("should map 44321");
         assert!(*host_port_8080 >= 40_000 && *host_port_8080 <= 60_000);
         assert!(*host_port_44321 >= 40_000 && *host_port_44321 <= 60_000);
 
@@ -407,5 +420,4 @@ mod tests {
         assert!(resp.warnings.is_empty());
         clear_container(sandbox_id);
     }
-
 }

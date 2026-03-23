@@ -85,11 +85,10 @@ pub(crate) fn build_bridge_archive(bridge_binary_host_path: &Path) -> Result<Vec
         )
         .map_err(|error| bridge_runtime_error(format!("打包 upod-bridge 归档失败: {error}")))?;
 
-    archive.into_inner().map_err(|error| {
-        bridge_runtime_error(format!("完成 upod-bridge 归档失败: {error}"))
-    })
+    archive
+        .into_inner()
+        .map_err(|error| bridge_runtime_error(format!("完成 upod-bridge 归档失败: {error}")))
 }
-
 
 /// 将目标文件的所有父目录写入 tar，避免解压时目录缺失。
 fn append_parent_directories(

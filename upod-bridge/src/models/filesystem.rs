@@ -74,3 +74,36 @@ pub(crate) struct ReplaceFileContentItem {
     /// 替换后的新内容。
     pub(crate) new: String,
 }
+
+/// 获取文件列表请求参数
+#[derive(Debug, Deserialize)]
+pub(crate) struct ListFilesReq {
+    pub(crate) path: String,
+    #[serde(rename = "sortBy")]
+    pub(crate) sort_by: Option<String>,
+}
+
+/// 文件类型
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub(crate) enum FileType {
+    #[serde(rename = "file")]
+    File,
+    #[serde(rename = "directory")]
+    Directory,
+    #[serde(rename = "symlink")]
+    Symlink,
+}
+
+/// 文件树节点
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub(crate) struct FileNode {
+    pub(crate) name: String,
+    pub(crate) path: String,
+    pub(crate) size: u64,
+    pub(crate) mtime: u64,
+    pub(crate) ctime: u64,
+    #[serde(rename = "type")]
+    pub(crate) file_type: FileType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) children: Option<Vec<FileNode>>,
+}

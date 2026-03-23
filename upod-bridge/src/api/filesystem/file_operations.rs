@@ -9,7 +9,8 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 
 use crate::models::filesystem::{
-    FileInfo, PathsReq, Permission, RenameFileItem, ReplaceFileContentItem, SearchReq,
+    FileInfo, FileNode, FileType, ListFilesReq, PathsReq, Permission, RenameFileItem, ReplaceFileContentItem,
+    SearchReq,
 };
 
 /// 查询多个文件信息并按请求路径返回结果映射。
@@ -145,6 +146,94 @@ pub(crate) async fn replace_content(
         }
     }
     StatusCode::OK.into_response()
+}
+
+/// 递归获取文件列表，形成树形结构，并可按指定规则排序。
+/// 参数：`query.path` 为根目录，`query.sort_by` 为排序规则（name, size, mtime）。
+/// 返回：`200 + JSON`，内容为 `FileNode` 树。
+/// 错误：路径无效或文件访问失败时返回对应 HTTP 错误。
+pub(crate) async fn list_files(Query(query): Query<ListFilesReq>) -> impl IntoResponse {
+    if query.path.trim().is_empty() {
+        return (StatusCode::BAD_REQUEST, "missing query parameter 'path'").into_response();
+    }
+
+    let root = match fs::canonicalize(&query.path) {
+        Ok(path) => path,
+        Err(error) => return map_file_error(error),
+    };
+
+    match build_file_tree(&root, query.sort_by.as_deref()) {
+                Ok(tree) => {
+                    // 如果查询的是目录，直接返回其子节点列表；如果是文件，返回包含该文件的列表
+                    let result = if tree.file_type == FileType::Directory {
+                        tree.children.unwrap_or_default()
+                    } else {
+                        vec![tree]
+                    };
+            Json(result).into_response()
+        }
+        Err(error) => map_file_error(error),
+    }
+}
+
+fn build_file_tree(path: &Path, sort_by: Option<&str>) -> Result<FileNode, std::io::Error> {
+    let metadata = fs::symlink_metadata(path)?;
+    let name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_string();
+    let absolute_path = path.to_string_lossy().to_string();
+    let size = metadata.len();
+    let mtime = metadata
+        .modified()
+        .ok()
+        .and_then(system_time_to_millis)
+        .unwrap_or(0);
+    let ctime = metadata
+        .created()
+        .ok()
+        .and_then(system_time_to_millis)
+        .unwrap_or(mtime);
+
+    let file_type = if metadata.is_dir() {
+        FileType::Directory
+    } else if metadata.is_symlink() {
+        FileType::Symlink
+    } else {
+        FileType::File
+    };
+
+    let mut children = None;
+    if metadata.is_dir() {
+        let mut child_nodes = Vec::new();
+        for entry in fs::read_dir(path)? {
+            let entry = entry?;
+            if let Ok(child_node) = build_file_tree(&entry.path(), sort_by) {
+                child_nodes.push(child_node);
+            }
+        }
+
+        if let Some(sort) = sort_by {
+            match sort {
+                "name" => child_nodes.sort_by(|a, b| a.name.cmp(&b.name)),
+                "size" => child_nodes.sort_by(|a, b| a.size.cmp(&b.size)),
+                "mtime" => child_nodes.sort_by(|a, b| a.mtime.cmp(&b.mtime)),
+                _ => {} // 忽略不支持的排序
+            }
+        }
+        children = Some(child_nodes);
+    }
+
+    Ok(FileNode {
+        name,
+        path: absolute_path,
+        size,
+        mtime,
+        ctime,
+        file_type,
+        children,
+    })
 }
 
 /// 删除单个文件；当目标不存在时直接返回成功。
@@ -418,6 +507,40 @@ mod tests {
 
         let latest = fs::read_to_string(&target).expect("read replaced");
         assert_eq!(latest, "hello bridge");
+        let _ = fs::remove_dir_all(tmp_dir);
+    }
+
+    #[test]
+    /// 验证文件树形结构构建。
+    fn build_file_tree_works() {
+        let tmp_dir =
+            std::env::temp_dir().join(format!("upod-bridge-test-{}", uuid::Uuid::new_v4()));
+        fs::create_dir_all(&tmp_dir).expect("create temp dir");
+
+        let file1 = tmp_dir.join("a.txt");
+        let dir1 = tmp_dir.join("b_dir");
+        let file2 = dir1.join("c.txt");
+
+        fs::write(&file1, "file1").expect("write file");
+        fs::create_dir_all(&dir1).expect("create inner dir");
+        fs::write(&file2, "file2").expect("write inner file");
+
+        let tree = build_file_tree(&tmp_dir, Some("name")).expect("build tree");
+        assert_eq!(tree.file_type, FileType::Directory);
+        let children = tree.children.unwrap();
+        assert_eq!(children.len(), 2);
+        
+        // Sorted by name
+        assert_eq!(children[0].name, "a.txt");
+        assert_eq!(children[0].file_type, FileType::File);
+        assert!(children[0].children.is_none());
+
+        assert_eq!(children[1].name, "b_dir");
+        assert_eq!(children[1].file_type, FileType::Directory);
+        let inner_children = children[1].children.as_ref().unwrap();
+        assert_eq!(inner_children.len(), 1);
+        assert_eq!(inner_children[0].name, "c.txt");
+
         let _ = fs::remove_dir_all(tmp_dir);
     }
 }

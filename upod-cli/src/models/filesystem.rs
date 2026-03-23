@@ -57,3 +57,28 @@ pub struct ReplaceFileContentItem {
     /// 替换后的新内容。
     pub new: String,
 }
+
+/// 文件类型
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub enum FileType {
+    #[serde(rename = "file")]
+    File,
+    #[serde(rename = "directory")]
+    Directory,
+    #[serde(rename = "symlink")]
+    Symlink,
+}
+
+/// 文件树节点
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct FileNode {
+    pub name: String,
+    pub path: String,
+    pub size: u64,
+    pub mtime: u64,
+    pub ctime: u64,
+    #[serde(rename = "type")]
+    pub file_type: FileType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub children: Option<Vec<FileNode>>,
+}

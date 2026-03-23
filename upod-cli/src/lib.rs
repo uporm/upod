@@ -50,9 +50,9 @@
 pub mod client;
 pub mod command;
 pub mod error;
+mod filesystem;
 pub mod models;
 pub mod sandbox;
-mod filesystem;
 
 pub use client::UpodClient;
 pub use error::{Result, UpodError};

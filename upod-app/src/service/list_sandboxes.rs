@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
+use bollard::Docker;
 use bollard::models::ContainerSummary;
 use bollard::query_parameters::ListContainersOptions;
-use bollard::Docker;
 use upod_base::web::error::WebError;
 
 use crate::models::sandbox::{ListSandboxesReq, ListSandboxesResp, Sandbox};
 
-use super::sandbox_lifecycle::{docker_connect_error, SANDBOX_ID_LABEL};
+use super::sandbox_lifecycle::{SANDBOX_ID_LABEL, docker_connect_error};
 
 /// 获取沙箱列表
 ///
@@ -36,10 +36,8 @@ pub async fn list_sandboxes(req: ListSandboxesReq) -> Result<ListSandboxesResp, 
     filters.insert("label".to_string(), label_filters);
 
     // 处理状态过滤
-    if let Some(states) = req.state {
-        if !states.is_empty() {
-            filters.insert("status".to_string(), states);
-        }
+    if let Some(states) = req.state.filter(|s| !s.is_empty()) {
+        filters.insert("status".to_string(), states);
     }
 
     let containers = docker
@@ -56,10 +54,7 @@ pub async fn list_sandboxes(req: ListSandboxesReq) -> Result<ListSandboxesResp, 
             )
         })?;
 
-    let items = containers
-        .into_iter()
-        .map(build_sandbox_item)
-        .collect();
+    let items = containers.into_iter().map(build_sandbox_item).collect();
 
     Ok(ListSandboxesResp { items })
 }
@@ -86,10 +81,13 @@ fn build_sandbox_item(summary: ContainerSummary) -> Sandbox {
         .map(|n| n.trim_start_matches('/').to_string())
         .unwrap_or_default();
 
-    let status = summary.state.map(|s| s.to_string()).unwrap_or_else(|| "unknown".to_string());
-    
+    let status = summary
+        .state
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
     let image = summary.image.clone().unwrap_or_default();
-    
+
     let created_at = summary.created.map(|c| c.to_string()).unwrap_or_default();
 
     let metadata = summary.labels.unwrap_or_default();

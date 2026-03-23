@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use crate::{
-    client::UpodClient,
-    error::Result,
-};
+use crate::{client::UpodClient, error::Result};
 
 /// 针对单个沙箱的操作句柄。
 ///
