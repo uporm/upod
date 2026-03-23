@@ -103,19 +103,3 @@ pub struct GetSandboxResp {
     /// 元数据
     pub metadata: HashMap<String, String>,
 }
-
-/// 续期请求参数
-#[derive(Debug, Deserialize)]
-pub struct RenewSandboxExpirationReq {
-    /// 续期时长（秒）
-    #[serde(rename = "ttlSeconds")]
-    pub ttl_seconds: u64,
-}
-
-/// 续期响应
-#[derive(Debug, Serialize)]
-pub struct RenewSandboxExpirationResp {
-    /// 新的过期时间
-    #[serde(rename = "expiresAt")]
-    pub expires_at: String,
-}

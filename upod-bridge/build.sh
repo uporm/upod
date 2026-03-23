@@ -47,13 +47,10 @@ else
   fi
 fi
 
-rm -rf "${EXEC_BUILD_OUTPUT_DIR}/upod"
-mkdir -p "${EXEC_BUILD_OUTPUT_DIR}/upod"
-mv "${EXEC_BUILD_OUTPUT_DIR}/upod-bridge" "${EXEC_BUILD_OUTPUT_DIR}/upod/upod-bridge"
-
 if [[ -n "${PACKAGE_DIR}" ]]; then
   mkdir -p "${PACKAGE_DIR}/bin"
-  cp "${EXEC_BUILD_OUTPUT_DIR}/upod/upod-bridge" "${PACKAGE_DIR}/bin/upod-bridge"
+  cp "${EXEC_BUILD_OUTPUT_DIR}/upod-bridge" "${PACKAGE_DIR}/bin/upod-bridge"
 fi
 
-echo "upod-bridge built: ${EXEC_BUILD_OUTPUT_DIR}/upod/upod-bridge"
+echo "upod-bridge built: ${EXEC_BUILD_OUTPUT_DIR}/upod-bridge"
+

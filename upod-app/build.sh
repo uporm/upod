@@ -1,32 +1,43 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_DIR="$(dirname "${SCRIPT_DIR}")"
+# Exit immediately if a command exits with a non-zero status
+set -e
 
-TARGET_TRIPLE="${1:-}"
-PACKAGE_DIR="${2:-}"
+# Change to the directory where the script is located to ensure paths are correct
+cd "$(dirname "$0")"
 
-cd "${WORKSPACE_DIR}"
+echo "====================================="
+echo "🚀 Building upod-app (Release Mode)  "
+echo "====================================="
 
-if [[ -n "${TARGET_TRIPLE}" ]]; then
-  cargo build --release --target "${TARGET_TRIPLE}" -p upod-app
-  RELEASE_DIR="${WORKSPACE_DIR}/target/${TARGET_TRIPLE}/release"
+# Run cargo build with release profile
+cargo build --release
+
+# The compiled binary will be in the workspace target directory
+WORKSPACE_ROOT=".."
+TARGET_DIR="${WORKSPACE_ROOT}/target/release"
+BIN_NAME="upod"
+BIN_PATH="${TARGET_DIR}/${BIN_NAME}"
+
+if [ -f "$BIN_PATH" ]; then
+    echo "====================================="
+    echo "✅ Build Successful!"
+    echo "📦 Executable located at: ${BIN_PATH}"
+    
+    # Copy resources directory to target/release
+    if [ -d "resources" ]; then
+        cp -r "resources" "${TARGET_DIR}/"
+        echo "📂 Copied resources directory to ${TARGET_DIR}/"
+    else
+        echo "⚠️ Warning: resources directory not found!"
+    fi
+    
+    # Optional: Display the size of the binary
+    ls -lh "$BIN_PATH" | awk '{print "📏 Binary Size: " $5}'
+    echo "====================================="
 else
-  cargo build --release -p upod-app
-  RELEASE_DIR="${WORKSPACE_DIR}/target/release"
+    echo "====================================="
+    echo "❌ Build failed or binary not found!"
+    echo "====================================="
+    exit 1
 fi
-
-UPOD_OUT_DIR="${RELEASE_DIR}/upod"
-mkdir -p "${UPOD_OUT_DIR}"
-
-cp "${RELEASE_DIR}/upod" "${UPOD_OUT_DIR}/upod"
-cp -R "${SCRIPT_DIR}/resources" "${UPOD_OUT_DIR}/resources"
-
-if [[ -n "${PACKAGE_DIR}" ]]; then
-  mkdir -p "${PACKAGE_DIR}/bin" "${PACKAGE_DIR}/config"
-  cp "${UPOD_OUT_DIR}/upod" "${PACKAGE_DIR}/bin/upod"
-  cp "${UPOD_OUT_DIR}/resources/application.toml" "${PACKAGE_DIR}/config/application.toml"
-  cp -R "${UPOD_OUT_DIR}/resources/locales" "${PACKAGE_DIR}/config/locales"
-fi
-
